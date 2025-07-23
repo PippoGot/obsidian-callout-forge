@@ -87,6 +87,8 @@ describe('Template class', () => {
             // The tokens array should be empty
             expect(template.tokens).toHaveLength(0);
         });
+
+
     });
 
     // Group tests related to the appendTokenSyntax static method

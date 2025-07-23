@@ -42,13 +42,40 @@ export class Template {
         // Trim leading/trailing whitespace from the template string
         templateString = templateString.trim();
 
-        // Parse the template string to extract token matches
+        // Parse the template string to extract token matches (detailed objects)
         const tokenMatches = Template._scanTemplateString(templateString);
 
-        // Extract Token objects from the matches
-        const tokens = tokenMatches.map(m => m.token);
+        // Array to hold unique tokens after conflict checks
+        const tokens: Token[] = [];
 
-        // Return a new Template instance with the original string and parsed tokens
+        // Iterate through each token match to check for conflicts
+        for (const { token } of tokenMatches) {
+            // Check if a token with the same name already exists in the tokens array
+            const existingToken = tokens.find(t => t.name === token.name);
+
+            if (existingToken) {
+                // If the token subclasses differ, throw an error (conflicting types)
+                if (!existingToken.isSameSubclass(token)) {
+                    throw new CalloutForgeError(
+                        `Token conflict: Token '${token.name}' exists with a different type.`
+                    );
+                }
+
+                // If the tokens are not equivalent (different default values, etc.), throw an error
+                if (!existingToken.isEquivalentTo(token)) {
+                    throw new CalloutForgeError(
+                        `Token conflict: Token '${token.name}' exists with different properties.`
+                    );
+                }
+
+                // If equivalent, no action needed, just continue
+            } else {
+                // If no existing token with this name, add current token to array
+                tokens.push(token);
+            }
+        }
+
+        // Return a new Template instance with the original string and unique, validated tokens
         return new Template(templateString, tokens);
     }
 

@@ -19,7 +19,24 @@ export abstract class Token {
         this.name = name;
     }
 
-    abstract toString(): string;    // Method to convert the token to a string representation
+    // Method to convert the token to a string representation
+    abstract toString(): string;
+
+    // Method to ceck if this token and another token are instances of the same subclass
+    isSameSubclass(other: Token): boolean {
+        return this.constructor === other.constructor;
+    }
+
+    // Method to check if this token is equal to another token
+    isEquivalentTo(other: Token): boolean {
+        // First, check if the subclasses are the same
+        if (!this.isSameSubclass(other)) {
+            return false; // Different subclasses cannot be equivalent
+        }
+
+        // Then, check if the names are the same
+        return this.name === other.name;
+    }
 }
 
 // Class representing a required token
@@ -63,5 +80,15 @@ export class DefaultedToken extends Token {
 
     toString(): string {
         return `{{ ${this.name} | ${this.defaultValue} }}`;
+    }
+
+    // Override isEquivalentTo to also check defaultValue
+    override isEquivalentTo(other: Token): boolean {
+        // First check the superclass equivalence
+        if (!super.isEquivalentTo(other)) return false;
+
+        // Then check the other properties specific to DefaultedToken
+        if (!(other instanceof DefaultedToken)) return false;
+        return this.defaultValue === other.defaultValue;
     }
 }
