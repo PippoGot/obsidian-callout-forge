@@ -10,7 +10,17 @@ export class Template {
 
     // Array of tokens parsed from the template string
     private _tokens: Token[];
-    get tokens(): Token[] { return this._tokens; }
+    get tokens(): Token[] {
+        if (!this._isBuilt) {
+            throw new CalloutForgeError("Template is not built yet. Call build() method first.");
+        }
+
+        return this._tokens;
+    }
+
+    // Flag to indicate if the template has been built
+    private _isBuilt: boolean = false;
+    get isBuilt(): boolean { return this._isBuilt; }
 
     // Static property to hold the token syntaxes
     private static _tokenSyntaxes: TokenSyntax[] = [
@@ -32,18 +42,22 @@ export class Template {
     ]
 
     // Constructor to initialize the Template instance
-    constructor(sourceString: string, tokens: Token[]) {
-        this._sourceString = sourceString;
-        this._tokens = tokens;
+    constructor(sourceString: string, autoBuild: boolean = true) {
+        this._sourceString = sourceString.trim();
+        if (autoBuild) {
+            this.build();
+        }
     }
 
-    // Static method to construct a Template instance from a raw template string
-    static build(templateString: string): Template {
-        // Trim leading/trailing whitespace from the template string
-        templateString = templateString.trim();
+    // Method to build the template, i.e. populate the tokens array
+    build(): void {
+        // If the template is already built, throw an error
+        if (this._isBuilt) {
+            throw new CalloutForgeError("Template is already built. Cannot build again.");
+        }
 
         // Parse the template string to extract token matches (detailed objects)
-        const tokenMatches = Template._scanTemplateString(templateString);
+        const tokenMatches = Template._scanTemplateString(this._sourceString);
 
         // Array to hold unique tokens after conflict checks
         const tokens: Token[] = [];
@@ -75,8 +89,18 @@ export class Template {
             }
         }
 
-        // Return a new Template instance with the original string and unique, validated tokens
-        return new Template(templateString, tokens);
+        this._tokens = tokens;
+        this._isBuilt = true;
+    }
+
+    // Static method to build a Template instance from a source string
+    // This method is used to create a Template instance without needing to call the constructor directly
+    static fromString(sourceString: string): Template {
+        // Create a new Template instance with the source string
+        const template = new Template(sourceString);
+
+        // Return the built template instance
+        return template;
     }
 
     // Static helper method that scans the template string and returns detailed token matches
@@ -106,7 +130,7 @@ export class Template {
                     const syntax = syntaxMap[syntaxName];
 
                     // Re-execute that syntax's individual regex to extract capture groups
-                    const innerMatch = new RegExp(syntax.regex.source).exec(match[0]);
+                    const innerMatch = syntax.regex.exec(match[0]);
 
                     // If the inner match is valid, construct and store the token match
                     if (innerMatch) {
@@ -165,5 +189,18 @@ export class Template {
 
         // Return the final normalized string
         return normalized;
+    }
+
+    // Method to check if the template has a specific token
+    hasToken(tokenName: string): boolean {
+        return this.tokens.some(token => token.name === tokenName);
+    }
+
+    // Method to get a token by its name
+    getToken(tokenName: string): Token {
+        if (!this.hasToken(tokenName)) {
+            throw new CalloutForgeError(`Token '${tokenName}' not found in the template.`);
+        }
+        return this.tokens.find(t => t.name === tokenName)!;
     }
 }

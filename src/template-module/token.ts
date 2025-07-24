@@ -12,11 +12,11 @@ export interface TokenMatch {
 
 // Interface representing a token
 export abstract class Token {
-    name: string;                           // Name of the token
+    readonly name: string;                  // Name of the token
     static readonly isRequired: boolean;    // Whether the token is required
 
     constructor(name: string) {
-        this.name = name;
+        this.name = name.trim();
     }
 
     // Method to convert the token to a string representation
@@ -41,8 +41,8 @@ export abstract class Token {
 
 // Class representing a required token
 export class RequiredToken extends Token {
-    name: string;
-    static override isRequired: boolean = true;
+    readonly name: string;
+    static override readonly isRequired: boolean = true;
 
     constructor(name: string) {
         super(name);
@@ -55,8 +55,9 @@ export class RequiredToken extends Token {
 
 // Class representing an optional token
 export class OptionalToken extends Token {
-    name: string;
-    static override isRequired: boolean = false;
+    readonly name: string;
+    readonly defaultValue: string = "";
+    static override readonly isRequired: boolean = false;
 
     constructor(name: string) {
         super(name);
@@ -69,9 +70,9 @@ export class OptionalToken extends Token {
 
 // Class representing a defaulted token
 export class DefaultedToken extends Token {
-    name: string;
-    defaultValue: string;
-    static override isRequired: boolean = false;
+    readonly name: string;
+    readonly defaultValue: string;
+    static override readonly isRequired: boolean = false;
 
     constructor(name: string, defaultValue: string) {
         super(name);

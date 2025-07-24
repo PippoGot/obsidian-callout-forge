@@ -18,13 +18,16 @@ describe('Token classes', () => {
             expect(token.toString()).toBe(`{{ ${tokenName} }}`);
         });
 
-        // Test the OptionalToken class functionality
-        test('OptionalToken should correctly store name and have isRequired = false', () => {
+        // Test the OptionalToken class functionality with default value = ''
+        test('OptionalToken should store name, default to empty string and have isRequired = false', () => {
             const tokenName = 'user-name';
             const token = new OptionalToken(tokenName);
 
             // Check that the token name is stored correctly
             expect(token.name).toBe(tokenName);
+
+            // OptionalToken should default its value to an empty string
+            expect(token.defaultValue).toBe('');
 
             // Check the static isRequired property is false for OptionalToken
             expect(OptionalToken.isRequired).toBe(false);
@@ -60,13 +63,13 @@ describe('Token classes', () => {
             const optional = new OptionalToken('opt');
             const defaulted = new DefaultedToken('def', 'val');
 
+            // Check correct subclass instances
             expect(required).toBeInstanceOf(RequiredToken);
             expect(optional).toBeInstanceOf(OptionalToken);
             expect(defaulted).toBeInstanceOf(DefaultedToken);
 
-            // Optionally check they are instances of the base class Token too
-            // (This depends on if Token is a class or abstract class - it is)
-            expect(required).toBeInstanceOf(Object);   // base Object for sure
+            // Check inheritance from base class
+            expect(required).toBeInstanceOf(Object); // all should derive from Object
         });
     });
 
@@ -76,7 +79,7 @@ describe('Token classes', () => {
             const token1 = new RequiredToken('alpha');
             const token2 = new RequiredToken('beta');
 
-            // Both are RequiredToken instances, so should return true
+            // Both are RequiredToken instances
             expect(token1.isSameSubclass(token2)).toBe(true);
         });
 
@@ -85,56 +88,82 @@ describe('Token classes', () => {
             const token1 = new RequiredToken('alpha');
             const token2 = new OptionalToken('alpha');
 
-            // Different subclasses, so should return false
+            // Different subclasses => not the same
             expect(token1.isSameSubclass(token2)).toBe(false);
         });
 
-        // Test isEquivalentTo returns true for tokens with same subclass and identical properties
+        // Test isEquivalentTo returns true when subclass and properties match
         test('isEquivalentTo returns true for tokens with same subclass and identical properties', () => {
             const token1 = new RequiredToken('gamma');
             const token2 = new RequiredToken('gamma');
 
-            // Same subclass and same name => equivalent
+            // Same type and same name => equivalent
             expect(token1.isEquivalentTo(token2)).toBe(true);
         });
 
-        // Test isEquivalentTo returns false for tokens with same subclass but different names
+        // Test isEquivalentTo returns false for different names, same subclass
         test('isEquivalentTo returns false for tokens with same subclass but different names', () => {
             const token1 = new RequiredToken('gamma');
             const token2 = new RequiredToken('delta');
 
-            // Same subclass but different names => not equivalent
+            // Same type but different name => not equivalent
             expect(token1.isEquivalentTo(token2)).toBe(false);
         });
 
-        // Test isEquivalentTo returns false for tokens of different subclasses even if names match
+        // Test isEquivalentTo returns false for same name but different subclasses
         test('isEquivalentTo returns false for tokens of different subclasses even if names match', () => {
             const token1 = new RequiredToken('epsilon');
             const token2 = new OptionalToken('epsilon');
 
-            // Different subclasses => not equivalent
+            // Same name but different type => not equivalent
             expect(token1.isEquivalentTo(token2)).toBe(false);
         });
 
-        // Test isEquivalentTo returns true for DefaultedTokens with same name and defaultValue
+        // Test isEquivalentTo for DefaultedToken with identical name and default value
         test('isEquivalentTo returns true for DefaultedTokens with same name and defaultValue', () => {
             const token1 = new DefaultedToken('locale', 'en-US');
             const token2 = new DefaultedToken('locale', 'en-US');
 
-            // Same subclass, name and defaultValue => equivalent
+            // All properties match => equivalent
             expect(token1.isEquivalentTo(token2)).toBe(true);
         });
 
-        // Test isEquivalentTo returns false for DefaultedTokens with same name but different defaultValue
+        // Test isEquivalentTo for DefaultedTokens with different default values
         test('isEquivalentTo returns false for DefaultedTokens with same name but different defaultValue', () => {
             const token1 = new DefaultedToken('locale', 'en-US');
             const token2 = new DefaultedToken('locale', 'fr-FR');
 
-            // Different default values => not equivalent
+            // Default values differ => not equivalent
+            expect(token1.isEquivalentTo(token2)).toBe(false);
+        });
+
+        // Test isEquivalentTo returns true for OptionalTokens with same name
+        test('isEquivalentTo returns true for OptionalTokens with same name', () => {
+            const token1 = new OptionalToken('bar');
+            const token2 = new OptionalToken('bar');
+
+            // Same subclass and name => equivalent
+            expect(token1.isEquivalentTo(token2)).toBe(true);
+        });
+
+        // Test isEquivalentTo returns false for OptionalToken vs DefaultedToken with same name
+        test('OptionalToken is not equivalent to DefaultedToken with same name', () => {
+            const token1 = new OptionalToken('baz');
+            const token2 = new DefaultedToken('baz', '');
+
+            // Different subclass => not equivalent
+            expect(token1.isEquivalentTo(token2)).toBe(false);
+        });
+
+        // Test isEquivalentTo returns false for OptionalToken vs RequiredToken with same name
+        test('OptionalToken is not equivalent to RequiredToken with same name', () => {
+            const token1 = new OptionalToken('qux');
+            const token2 = new RequiredToken('qux');
+
+            // Different subclass => not equivalent
             expect(token1.isEquivalentTo(token2)).toBe(false);
         });
     });
-
 });
 
 
