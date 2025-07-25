@@ -41,7 +41,6 @@ export abstract class Token {
 
 // Class representing a required token
 export class RequiredToken extends Token {
-    readonly name: string;
     static override readonly isRequired: boolean = true;
 
     constructor(name: string) {
@@ -55,7 +54,6 @@ export class RequiredToken extends Token {
 
 // Class representing an optional token
 export class OptionalToken extends Token {
-    readonly name: string;
     readonly defaultValue: string = "";
     static override readonly isRequired: boolean = false;
 
@@ -70,7 +68,6 @@ export class OptionalToken extends Token {
 
 // Class representing a defaulted token
 export class DefaultedToken extends Token {
-    readonly name: string;
     readonly defaultValue: string;
     static override readonly isRequired: boolean = false;
 
