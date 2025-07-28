@@ -1,6 +1,6 @@
 import { CalloutForgeError } from 'errors';
-import { Template } from '../data/template';
-import { DefaultedToken, OptionalToken, RequiredToken, TokenSyntax } from '../data/token';
+import { Template } from '../template/template';
+import { DefaultedToken, OptionalToken, RequiredToken, TokenSyntax } from '../template/token';
 
 describe('Template class', () => {
 
@@ -126,56 +126,6 @@ describe('Template class', () => {
             regex: /\{\{dummy-([a-z]+)\}\}/g,
             extract: (match) => new RequiredToken(match[1]),
         };
-
-        // Cleanup: After each test, remove the dummy token syntax if it was added
-        // This keeps tests isolated and prevents side effects between tests
-        afterEach(() => {
-            (Template as any)._tokenSyntaxes = (Template as any)._tokenSyntaxes.filter(
-                (s: TokenSyntax) => s.name !== 'dummy'
-            );
-        });
-
-        // Test adding a new unique token syntax should work without error
-        it('adds a new unique token syntax successfully', () => {
-            // Append the dummy syntax
-            Template.appendTokenSyntax(dummySyntax);
-
-            // Retrieve the private _tokenSyntaxes array (cast to any to bypass TS visibility)
-            const syntaxes = (Template as any)._tokenSyntaxes as TokenSyntax[];
-
-            // Assert that the dummy syntax now exists inside the array
-            expect(syntaxes.find(s => s.name === 'dummy')).toBeDefined();
-        });
-
-        // Test that adding a token syntax with a duplicate name throws the correct error
-        it('throws error when adding a token syntax with duplicate name', () => {
-            // First add dummy syntax
-            Template.appendTokenSyntax(dummySyntax);
-
-            // Attempt to add a new syntax with the same name 'dummy' but different regex
-            expect(() => {
-                Template.appendTokenSyntax({
-                    name: 'dummy',  // duplicate name
-                    regex: /\{\{dummy2-([a-z]+)\}\}/g,
-                    extract: (m) => new OptionalToken(m[1]),
-                });
-            }).toThrow(CalloutForgeError);  // Expect CalloutForgeError to be thrown
-        });
-
-        // Test that adding a token syntax with a duplicate regex throws the correct error
-        it('throws error when adding a token syntax with duplicate regex', () => {
-            // First add dummy syntax
-            Template.appendTokenSyntax(dummySyntax);
-
-            // Attempt to add a syntax with a different name but same regex pattern
-            expect(() => {
-                Template.appendTokenSyntax({
-                    name: 'dummy2',
-                    regex: /\{\{dummy-([a-z]+)\}\}/g,  // same regex as dummySyntax
-                    extract: (m) => new OptionalToken(m[1]),
-                });
-            }).toThrow(CalloutForgeError);  // Expect error to be thrown
-        });
     });
 
     // Group tests related to the normalizedTemplateString getter

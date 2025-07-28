@@ -1,5 +1,8 @@
+import { CalloutForgeError } from "errors";
+import { Token } from "template/token";
+
 // Class to represent the parsed properties (key: value)
-export class Property {
+export class CodeblockProperty {
     // Name of the property
     readonly name: string;
 
@@ -21,6 +24,44 @@ export class Property {
     public toString(): string {
         return `${this.name}: ${this._value}`;
     }
+}
+
+// TODO: move where it belongs, but where does it belong ?
+export function normalizeCodeblockProperties(properties: CodeblockProperty[], tokens: Token[]): CodeblockProperty[] {
+    const normalized: CodeblockProperty[] = [];
+    const missingRequiredTokens: string[] = [];
+
+    // Build a map for fast lookup
+    const propMap = new Map<string, CodeblockProperty>();
+    for (const prop of properties) {
+        propMap.set(prop.name.trim(), prop);
+    }
+
+    for (const token of tokens) {
+        const name = token.name.trim();
+        const prop = propMap.get(name);
+
+        if (prop) {
+            normalized.push(prop); // Keep valid property
+        } else {
+            const tokenConstructor = token.constructor as typeof Token;
+
+            if (tokenConstructor.isRequired) {
+                missingRequiredTokens.push(name); // Collect missing required
+            } else {
+                // Optional token
+                const defaultValue = (token as any).defaultValue;
+                normalized.push(new CodeblockProperty(name, defaultValue));
+            }
+        }
+    }
+
+    // Report missing required tokens
+    if (missingRequiredTokens.length > 0) {
+        throw new CalloutForgeError(`Missing required properties: ${missingRequiredTokens.join(", ")}`);
+    }
+
+    return normalized;
 }
 
 // Type to improve typing of MatchRule

@@ -1,6 +1,6 @@
 import { CalloutForgeError } from "errors";
 import { ACCEPTING_STATES, ParserState, TRANSITION_MAP } from "./states";
-import { CodeblockLine, LineMatch, MatchRule, Property, RuleName } from "./types";
+import { CodeblockLine, CodeblockProperty, LineMatch, MatchRule, RuleName } from "./types";
 
 export class CodeblockParser {
     // List of lines to parse
@@ -13,7 +13,7 @@ export class CodeblockParser {
     // Current parsed line
     private _currentLineMatch: LineMatch;
     // Property buffer, should always have less than 2 items (either one or 0)
-    private _currentProperty: Property | null = null;
+    private _currentProperty: CodeblockProperty | null = null;
 
     // Matching rules for the lines content
     private _lineMatchers = new Map<RuleName, MatchRule>([
@@ -59,7 +59,7 @@ export class CodeblockParser {
     private _errorMessage: string | null = null;
 
     // The property array needed from the parsing
-    private _parsedProperties: Property[] = [];
+    private _parsedProperties: CodeblockProperty[] = [];
     get properties() { return this._parsedProperties; }
 
     // Property names needed in every codeblock
@@ -100,7 +100,7 @@ export class CodeblockParser {
     }
 
     // Static method to get the parsed properties from a string
-    static parseProperties(source: string): Property[] {
+    static parseProperties(source: string): CodeblockProperty[] {
         const parser = new CodeblockParser(source);
         return parser.properties;
     }
@@ -201,7 +201,7 @@ export class CodeblockParser {
         // Create the new property
         // The RegExpExecArray contains the property name in the first group,
         // and the value in the second group
-        let newProperty = new Property(this._currentLineMatch.match[1], this._currentLineMatch.match[2]);
+        let newProperty = new CodeblockProperty(this._currentLineMatch.match[1], this._currentLineMatch.match[2]);
 
         // Then put it in the buffer since it may have more lines to append
         this._currentProperty = newProperty;

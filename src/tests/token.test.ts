@@ -1,4 +1,4 @@
-import { DefaultedToken, OptionalToken, RequiredToken } from '../data/token';
+import { DefaultedToken, OptionalToken, RequiredToken } from '../template/token';
 
 describe('Token classes', () => {
 

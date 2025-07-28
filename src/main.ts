@@ -1,8 +1,12 @@
-import { parseCodeBlock } from "codeblock";
-import { compileTemplateString, gatherAndFilterParameters, loadTemplateString, parseTemplateParameters } from "template";
+import { loadTemplateString } from "template";
+
+import { App, MarkdownPostProcessorContext, Plugin, sanitizeHTMLToDom } from 'obsidian';
 
 import { CodeblockParser } from "codeblock-parser/parser";
-import { App, MarkdownRenderer, Plugin } from 'obsidian'; // Import Obsidian API classes
+import { normalizeCodeblockProperties } from "codeblock-parser/types";
+import { CalloutForgeError } from "errors";
+import { renderCodeblockProperties } from "rendering/renderer";
+import { Template } from "template/template";
 
 // Codeblock Processor class
 export class CalloutForgeCodeBlockProcessor {
@@ -18,45 +22,41 @@ export class CalloutForgeCodeBlockProcessor {
 	}
 
 	// Main function to process the code block
-	private async processCodeBlock(source: string, wrapperHtmlElement: HTMLElement, ctx: any): Promise<void> {
+	private async processCodeBlock(source: string, wrapperHtmlElement: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> {
 		try {
-			// Test codeblock parser functionality
+			// Order of operations:
+			// 1) Parse codeblock to extract properties
 			const properties = CodeblockParser.parseProperties(source);
-			for (const property of properties) {
-				console.log(property.toString());
-				console.log();
+
+			// 2) Obtain filepath of the requested template
+			const filename = properties.find(property => property.name === "template");
+			if (!filename) {
+				throw new CalloutForgeError("Codeblock has no template property.");
 			}
 
-			// Set the class name for the wrapper element
+			// 3) Read the HTML template
+			const templateString = await loadTemplateString(this.app, `${this.plugin.HTMLFolderPath}/${filename.value}.html`);
+
+			// 4) Parse template to extract template tokens
+			const template = Template.fromString(templateString);
+			const tokens = template.tokens;
+
+			// 5) Filter properties to keep only the ones in the template
+			const normalizedProperties = normalizeCodeblockProperties(properties, tokens);
+
+			// 6) Render property values from markdown to HTML using obsidian API
+			const context = { app: this.app, plugin: this.plugin, sourcePath: ctx.sourcePath };
+			const renderedProperties = await renderCodeblockProperties(normalizedProperties, context);
+
+			// 7) Replace the rendered content in the placeholders
+			const filledTemplate = template.fill(renderedProperties);
+
+			// 8) Sanitize the compiled HTML string
+			const sanitizedTemplate = sanitizeHTMLToDom(filledTemplate);
+
+			// 9) Render the final element
 			wrapperHtmlElement.className = "callout-forge-wrapper";
-
-			// Get the codeblock source string and trims excess spaces
-			const codeBlockSource = source.trim();
-
-			// Parse the configuration into a dictionary
-			// Each line in the configuration should be in the format "key: value"
-			const configDict = parseCodeBlock(codeBlockSource);
-
-			// Get the template HTML string from the plugin's HTML folder
-			const htmlTemplateString = await loadTemplateString(this.app, `${this.plugin.HTMLFolderPath}/${configDict.template}.html`);
-
-			// Extract template parameters from the HTML template string
-			const templateParameters = parseTemplateParameters(htmlTemplateString);
-
-			// Gather and filter parameters from the configuration dictionary
-			const filteredDict = gatherAndFilterParameters(configDict, templateParameters);
-
-			// Fill the template with rendered values from the configuration
-			const compiledHtmlTemplateString = await compileTemplateString(this.app, this.plugin, htmlTemplateString, filteredDict);
-
-			// Render the filled HTML template into the element
-			await MarkdownRenderer.render(
-				this.app,                	// Obsidian app instance
-				compiledHtmlTemplateString,	// HTML to render
-				wrapperHtmlElement,         // Target element
-				ctx.sourcePath,          	// Source path for context
-				this.plugin              	// Plugin instance
-			);
+			wrapperHtmlElement.appendChild(sanitizedTemplate);
 		}
 		catch (error) {
 			// If an error occurs, log it and throw a CalloutForgeError

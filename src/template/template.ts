@@ -1,4 +1,5 @@
 import { CalloutForgeError } from "errors";
+import { MarkdownRenderedProperty } from "rendering/types";
 import { DefaultedToken, OptionalToken, RequiredToken, Token, TokenMatch, TokenSyntax } from "./token";
 
 // Class representing the data structure for template module
@@ -10,17 +11,7 @@ export class Template {
 
     // Array of tokens parsed from the template string
     private _tokens: Token[];
-    get tokens(): Token[] {
-        if (!this._isBuilt) {
-            throw new CalloutForgeError("Template is not built yet. Call build() method first.");
-        }
-
-        return this._tokens;
-    }
-
-    // Flag to indicate if the template has been built
-    private _isBuilt: boolean = false;
-    get isBuilt(): boolean { return this._isBuilt; }
+    get tokens(): Token[] { return this._tokens; }
 
     // Static property to hold the token syntaxes
     private static _tokenSyntaxes: TokenSyntax[] = [
@@ -42,20 +33,13 @@ export class Template {
     ]
 
     // Constructor to initialize the Template instance
-    constructor(sourceString: string, autoBuild: boolean = true) {
+    constructor(sourceString: string) {
         this._sourceString = sourceString.trim();
-        if (autoBuild) {
-            this.build();
-        }
+        this._build();
     }
 
     // Method to build the template, i.e. populate the tokens array
-    build(): void {
-        // If the template is already built, throw an error
-        if (this._isBuilt) {
-            throw new CalloutForgeError("Template is already built. Cannot build again.");
-        }
-
+    private _build(): void {
         // Parse the template string to extract token matches (detailed objects)
         const tokenMatches = Template._scanTemplateString(this._sourceString);
 
@@ -90,7 +74,6 @@ export class Template {
         }
 
         this._tokens = tokens;
-        this._isBuilt = true;
     }
 
     // Static method to build a Template instance from a source string
@@ -151,21 +134,6 @@ export class Template {
         return matches;
     }
 
-    // Static method to append new token syntaxes
-    static appendTokenSyntax(tokenSyntax: TokenSyntax): void {
-        // If the syntax already exists, throw an error
-        // This can happen if the name is the same or if the regex is the same
-        if (Template._tokenSyntaxes.some(s => s.name === tokenSyntax.name)) {
-            throw new CalloutForgeError(`Token syntax with name '${tokenSyntax.name}' already exists.`);
-        }
-        if (Template._tokenSyntaxes.some(s => s.regex.toString() === tokenSyntax.regex.toString())) {
-            throw new CalloutForgeError(`Token syntax with regex '${tokenSyntax.regex}' already exists.`);
-        }
-
-        // If no conflict, add the new token syntax to the static array
-        Template._tokenSyntaxes.push(tokenSyntax);
-    }
-
     // Returns the normalized version of the template string,
     // where all tokens are converted to the required syntax format ({{ name }})
     get normalizedTemplateString(): string {
@@ -202,5 +170,41 @@ export class Template {
             throw new CalloutForgeError(`Token '${tokenName}' not found in the template.`);
         }
         return this.tokens.find(t => t.name === tokenName)!;
+    }
+
+    // Fill method to substitute rendered properties into the normalized template string
+    fill(properties: MarkdownRenderedProperty[]): string {
+        const renderedMap = new Map<string, string>();
+        for (const prop of properties) {
+            renderedMap.set(prop.name.trim(), prop.value);
+        }
+
+        let filled = this.normalizedTemplateString;
+
+        const missingTokens: string[] = [];
+
+        for (const token of this.tokens) {
+            const key = token.name;
+            const placeholder = `{{ ${key} }}`;
+
+            if (!renderedMap.has(key)) {
+                missingTokens.push(key);
+                continue;
+            }
+
+            const renderedValue = renderedMap.get(key)!;
+
+            // Escape special characters for use in regex
+            const escapedPlaceholder = placeholder.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(escapedPlaceholder, 'g');
+
+            filled = filled.replace(regex, renderedValue);
+        }
+
+        if (missingTokens.length > 0) {
+            throw new CalloutForgeError(`Missing rendered values for tokens: ${missingTokens.join(', ')}`);
+        }
+
+        return filled;
     }
 }
