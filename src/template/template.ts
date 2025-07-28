@@ -1,5 +1,5 @@
-import { CalloutForgeError } from "errors";
 import { MarkdownRenderedProperty } from "rendering/types";
+import { CalloutForgeError } from "../utils/errors";
 import { DefaultedToken, OptionalToken, RequiredToken, Token, TokenMatch, TokenSyntax } from "./token";
 
 // Class representing the data structure for template module

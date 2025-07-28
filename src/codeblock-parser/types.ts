@@ -1,5 +1,5 @@
-import { CalloutForgeError } from "errors";
-import { Token } from "template/token";
+import { Token } from "../template/token";
+import { CalloutForgeError } from "../utils/errors";
 
 // Class to represent the parsed properties (key: value)
 export class CodeblockProperty {

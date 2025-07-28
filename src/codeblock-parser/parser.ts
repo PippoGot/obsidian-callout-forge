@@ -1,4 +1,4 @@
-import { CalloutForgeError } from "errors";
+import { CalloutForgeError } from "../utils/errors";
 import { ACCEPTING_STATES, ParserState, TRANSITION_MAP } from "./states";
 import { CodeblockLine, CodeblockProperty, LineMatch, MatchRule, RuleName } from "./types";
 
