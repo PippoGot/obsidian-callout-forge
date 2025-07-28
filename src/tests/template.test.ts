@@ -1,6 +1,6 @@
 import { CalloutForgeError } from 'errors';
-import { Template } from '../template-module/template';
-import { DefaultedToken, OptionalToken, RequiredToken, TokenSyntax } from '../template-module/token';
+import { Template } from '../data/template';
+import { DefaultedToken, OptionalToken, RequiredToken, TokenSyntax } from '../data/token';
 
 describe('Template class', () => {
 

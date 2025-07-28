@@ -1,38 +1,52 @@
 /**
- * Splits a string into [head, tail] at the first occurrence of a delimiter.
- * The delimiter can be a string or a RegExp.
- * If the delimiter is not found, an error is thrown.
+ * Splits a string into [head, tail] at the specified occurrence of a delimiter.
+ * The delimiter is a string, and the split excludes the delimiter itself.
  *
- * @param sourceString - The string to split.
- * @param delimiter - The delimiter to split on (string or RegExp).
- * @returns A tuple [head, tail] split at the first occurrence of the delimiter,
- * excluding the delimiter itself from both parts.
- * @throws Error if the delimiter is not found in the string.
+ * @param sourceString - The input string to split.
+ * @param delimiter - The delimiter string to split on.
+ * @param occurrence - Which occurrence of the delimiter to split at:
+ *   - "first" (default) or 1: split at the first occurrence
+ *   - "last" or -1: split at the last occurrence
+ *   - number > 0: split at the Nth occurrence
+ *
+ * @returns A tuple [head, tail] where:
+ *   - head contains the substring before the specified delimiter occurrence
+ *   - tail contains the substring after the specified delimiter occurrence
+ *
+ * @throws Error if:
+ *   - occurrence is 0 (not allowed)
+ *   - occurrence is greater than available delimiter occurrences
  */
-// MAYBE: option to include the delimiter to one of the parts or as array element
-export function stringBisect(sourceString: string, delimiter: string | RegExp): string[] {
-    // If delimiter is a string, convert it to a RegExp (escaped) to match the first occurrence
-    const regex = typeof delimiter === "string" ? new RegExp(escapeRegExp(delimiter)) : delimiter;
-
-    // Execute the regex to find the first match in the source string
-    const match = regex.exec(sourceString);
-    // If no match is found or the match is zero-length, throw an error
-    if (!match || match.index === undefined || match[0].length === 0) {
-        throw new Error(`Delimiter "${delimiter.toString()}" not found in source string.`);
+export function stringBisect(sourceString: string, delimiter: string, occurrence: number | "first" | "last" = "first"): string[] {
+    // Zero-length delimiter is not accepted
+    if (delimiter.length === 0) {
+        throw new Error(`Delimiter cannot be an empty string.`);
     }
 
-    // Slice the string into two parts: before and after the delimiter match
-    const head = sourceString.slice(0, match.index);
-    const tail = sourceString.slice(match.index + match[0].length);
-    return [head, tail];
-}
+    // Occurrence value 0 has no meanining
+    if (occurrence === 0) {
+        throw new Error(`Occurrence "0" is not allowed. Use a non-zero number, "first" or "last".`);
+    }
 
-/**
- * Escapes special characters in a string so it can be safely used in a RegExp.
- *
- * @param str - The string to escape.
- * @returns The escaped string.
- */
-function escapeRegExp(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Normalize 'first' and 'last' to numbers
+    occurrence === "first" ? occurrence = 1 : null;
+    occurrence === "last" ? occurrence = -1 : null;
+
+    // Split the string by the delimiter into parts
+    const splits = sourceString.split(delimiter);
+
+    // Adjust negative occurrence to positive index from the end
+    occurrence < 0 ? occurrence = splits.length + occurrence : null;
+
+    // Check if occurrence is within bounds (must have that many delimiters)
+    if (occurrence > splits.length - 1) {
+        throw new Error(`Occurrence index out of bounds.`);
+    }
+
+    // Join the parts before the delimiter occurrence for head
+    const head = splits.slice(0, occurrence).join(delimiter);
+    // Join the parts after the delimiter occurrence for tail
+    const tail = splits.slice(occurrence).join(delimiter);
+
+    return [head, tail];
 }

@@ -1,92 +1,73 @@
-import * as StringOps from "../utils/string-operations";
+import { stringBisect } from "../utils/string-operations";
 
-describe("StringOps.stringBisect", () => {
-    // Test basic string delimiter splitting
-    test("splits at first occurrence of string delimiter", () => {
-        const [head, tail] = StringOps.stringBisect("a::b::c", "::");
+describe("stringBisect", () => {
+    // Basic splitting at first occurrence
+    test("splits at first occurrence of a string delimiter", () => {
+        const [head, tail] = stringBisect("a::b::c", "::", "first");
         expect(head).toBe("a");
         expect(tail).toBe("b::c");
     });
 
-    // Test splitting using a regular expression as delimiter
-    test("splits at first match of RegExp delimiter", () => {
-        const [head, tail] = StringOps.stringBisect("x123y456", /\d+/);
-        expect(head).toBe("x");
-        expect(tail).toBe("y456");
+    // Splitting at a specific occurrence (numeric)
+    test("splits at 2nd occurrence of delimiter", () => {
+        const [head, tail] = stringBisect("a::b::c", "::", 2);
+        expect(head).toBe("a::b");
+        expect(tail).toBe("c");
     });
 
-    // Test when the delimiter is found at the beginning of the string
-    test("works when delimiter is at the beginning", () => {
-        const [head, tail] = StringOps.stringBisect("::abc", "::");
+    // Splitting at last occurrence
+    test("splits at last occurrence of delimiter", () => {
+        const [head, tail] = stringBisect("first##second##third", "##", "last");
+        expect(head).toBe("first##second");
+        expect(tail).toBe("third");
+    });
+
+    // Splitting when delimiter is at the beginning
+    test("splits when delimiter is at the beginning", () => {
+        const [head, tail] = stringBisect("::abc", "::", "first");
         expect(head).toBe("");
         expect(tail).toBe("abc");
     });
 
-    // Test when the delimiter is found at the end of the string
-    test("works when delimiter is at the end", () => {
-        const [head, tail] = StringOps.stringBisect("abc::", "::");
+    // Splitting when delimiter is at the end
+    test("splits when delimiter is at the end", () => {
+        const [head, tail] = stringBisect("abc::", "::", "first");
         expect(head).toBe("abc");
         expect(tail).toBe("");
     });
 
-    // Test that an error is thrown when the delimiter is not found (string case)
-    test("throws error when delimiter is not found (string)", () => {
-        const delimiter = "::";
+    // Throws when delimiter not found
+    test("throws error when delimiter is not found", () => {
         expect(() => {
-            StringOps.stringBisect("no-delimiter-here", delimiter);
-        }).toThrow(`Delimiter "${delimiter.toString()}" not found in source string.`);
+            stringBisect("abc", "@@");
+        }).toThrow('Occurrence index out of bounds.');
     });
 
-    // Test that an error is thrown when the delimiter is not found (regex case)
-    test("throws error when delimiter is not found (RegExp)", () => {
-        const delimiter = /\d+/;
+    // Throws when occurrence is 0
+    test("throws error for occurrence 0", () => {
         expect(() => {
-            StringOps.stringBisect("abc def", delimiter);
-        }).toThrow(`Delimiter "${delimiter.toString()}" not found in source string.`);
+            stringBisect("a::b", "::", 0);
+        }).toThrow('Occurrence "0" is not allowed. Use a non-zero number, "first" or "last".');
     });
 
-    // Test that special characters in string delimiters are handled correctly
-    test("handles delimiters with special regex characters", () => {
-        const [head, tail] = StringOps.stringBisect("a.*+?^b.*+?^c", ".*+?^");
-        expect(head).toBe("a");
-        expect(tail).toBe("b.*+?^c");
-    });
-
-    // Edge case: empty source string with delimiter present
-    test("throws error when splitting empty string", () => {
-        const delimiter = "::";
+    // Throws when occurrence exceeds number of delimiters
+    test("throws error for out-of-bounds occurrence", () => {
         expect(() => {
-            StringOps.stringBisect("", delimiter);
-        }).toThrow(`Delimiter "${delimiter.toString()}" not found in source string.`);
+            stringBisect("a::b", "::", 3);
+        }).toThrow('Occurrence index out of bounds.');
     });
 
-    // Edge case: delimiter is empty string (should throw or handle gracefully)
+    // Throws when delimiter is an empty string
     test("throws error when delimiter is empty string", () => {
-        const delimiter = "";
         expect(() => {
-            StringOps.stringBisect("abc", delimiter);
-        }).toThrow(`Delimiter "${delimiter.toString()}" not found in source string.`);
+            stringBisect("abc", "");
+        }).toThrow('Delimiter cannot be an empty string.');
     });
 
-    // Edge case: delimiter regex that matches empty string (should throw)
-    test("throws error when delimiter regex matches empty string", () => {
-        const delimiter = /^/; // matches start of string, zero-length match
-        expect(() => {
-            StringOps.stringBisect("abc", delimiter);
-        }).toThrow(`Delimiter "${delimiter.toString()}" not found in source string.`);
-    });
-
-    // Edge case: multiple delimiters, only first occurrence used
-    test("splits only at first occurrence of multiple delimiters", () => {
-        const [head, tail] = StringOps.stringBisect("first##second##third", "##");
-        expect(head).toBe("first");
-        expect(tail).toBe("second##third");
-    });
-
-    // Edge case: delimiter is a regex with multiple matches, split at first
-    test("splits at first regex match when multiple matches exist", () => {
-        const [head, tail] = StringOps.stringBisect("a1b2c3d", /\d/);
-        expect(head).toBe("a");
-        expect(tail).toBe("b2c3d");
+    // Negative occurrence (e.g. -1 = last)
+    test("splits at last occurrence using negative index", () => {
+        const [head, tail] = stringBisect("a::b::c", "::", -1);
+        expect(head).toBe("a::b");
+        expect(tail).toBe("c");
     });
 });
