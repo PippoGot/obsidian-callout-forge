@@ -62,6 +62,9 @@ export class CodeblockParser {
     private _parsedProperties: Property[] = [];
     get properties() { return this._parsedProperties; }
 
+    // Property names needed in every codeblock
+    static readonly mandatoryProperties: string[] = ["template"];
+
     constructor(source: string) {
         // Guard input type
         if (typeof source !== "string") {
@@ -141,8 +144,10 @@ export class CodeblockParser {
     }
 
     /**
-     * Validates the parsed properties and collects all duplicate property names.
-     * Throws an error listing all duplicates if any are found.
+     * Validates the parsed properties by:
+     * - Checking for duplicate property names and throwing an error if duplicates are found.
+     * - Checking that all mandatory properties defined in the static class variable are present;
+     *   throws an error if any are missing.
      */
     private _validateProperties(): void {
         const seen = new Set<string>();
@@ -159,6 +164,13 @@ export class CodeblockParser {
         if (duplicates.size > 0) {
             const list = Array.from(duplicates).join(", ");
             throw new CalloutForgeError(`Duplicate properties found: ${list}`);
+        }
+
+        // Check for missing mandatory properties from static class variable
+        const missing = CodeblockParser.mandatoryProperties.filter(name => !seen.has(name));
+        if (missing.length > 0) {
+            const list = missing.join(", ");
+            throw new CalloutForgeError(`Missing mandatory properties: ${list}`);
         }
     }
 
