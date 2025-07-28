@@ -1,4 +1,4 @@
-import { CodeblockParser } from '../data/codeblock-parser';
+import { CodeblockParser } from '../codeblock-parser/parser';
 
 describe("CodeblockParser", () => {
 
@@ -14,7 +14,9 @@ describe("CodeblockParser", () => {
 
     // Parses multiline property with plain text continuation
     it("parses multiline property with plain text", () => {
-        const input = `description: First line\nSecond line\nThird line`;
+        const input = `description: First line
+Second line
+Third line`;
         const parser = new CodeblockParser(input);
 
         expect(parser.properties).toHaveLength(1);
@@ -24,26 +26,30 @@ describe("CodeblockParser", () => {
 
     // Parses property followed by fenced code block
     it("parses property with codefence", () => {
-        const input = `example: some code\n\`\`\`\nconst x = 42;\nconsole.log(x);\n\`\`\``;
+        const input = `example: some code
+\`\`\`
+const x = 42;
+console.log(x);
+\`\`\``;
         const parser = new CodeblockParser(input);
 
         expect(parser.properties).toHaveLength(1);
         expect(parser.properties[0].name).toBe("example");
-        expect(parser.properties[0].value).toBe("some code\n\`\`\`\nconst x = 42;\nconsole.log(x);\n\`\`\`");
+        expect(parser.properties[0].value).toBe("some code\n```\nconst x = 42;\nconsole.log(x);\n```");
     });
 
     // Parses multiple properties including fenced blocks
     it("parses multiple properties and fences", () => {
         const input = `
-      title: Example
-      description: starts here
-      continues here
-      \`\`\`
-      code block line
-      another line
-      \`\`\`
-      footer: done
-    `.trim();
+title: Example
+description: starts here
+continues here
+\`\`\`
+code block line
+another line
+\`\`\`
+footer: done
+`.trim();
 
         const parser = new CodeblockParser(input);
         const props = parser.properties;
@@ -53,7 +59,7 @@ describe("CodeblockParser", () => {
         expect(props[0].value).toBe("Example");
 
         expect(props[1].name).toBe("description");
-        expect(props[1].value).toBe("starts here\ncontinues here\n\`\`\`\ncode block line\nanother line\n\`\`\`");
+        expect(props[1].value).toBe("starts here\ncontinues here\n```\ncode block line\nanother line\n```");
 
         expect(props[2].name).toBe("footer");
         expect(props[2].value).toBe("done");
@@ -77,8 +83,10 @@ describe("CodeblockParser", () => {
 
     // Throws if codefence starts and never ends
     it("throws error if codefence is not closed", () => {
-        const input = `code: intro\n\`\`\`\nfunction()`;
-        expect(() => new CodeblockParser(input)).toThrow(/expected closing codefence/i);
+        const input = `code: intro
+\`\`\`
+function()`;
+        expect(() => new CodeblockParser(input)).toThrow(/Unexpected end of input/i);
     });
 
     // Throws if text exists with no active property
@@ -100,15 +108,87 @@ describe("CodeblockParser", () => {
     // Parses codefence with more than three backticks
     it("parses codefence with 4 backticks", () => {
         const input = `
-      snippet: usage
-      \`\`\`\`
-      line 1
-      line 2
-      \`\`\`\`
-    `.trim();
+snippet: usage
+\`\`\`\`
+line 1
+line 2
+\`\`\`\`
+`.trim();
 
         const parser = new CodeblockParser(input);
         expect(parser.properties).toHaveLength(1);
-        expect(parser.properties[0].value).toBe("usage\n\`\`\`\`\nline 1\nline 2\n\`\`\`\`");
+        expect(parser.properties[0].value).toBe("usage\n````\nline 1\nline 2\n````");
+    });
+
+    // --- Edge Cases ---
+
+    // Property with colon in value
+    it("parses property with colon in value", () => {
+        const input = `note: This is a note: with a colon`;
+        const parser = new CodeblockParser(input);
+
+        expect(parser.properties).toHaveLength(1);
+        expect(parser.properties[0].name).toBe("note");
+        expect(parser.properties[0].value).toBe("This is a note: with a colon");
+    });
+
+    // Codefence with language annotation
+    it("parses codefence with language annotation as text", () => {
+        const input = `example: with lang
+\`\`\`js
+console.log("Hello");
+\`\`\``;
+
+        const parser = new CodeblockParser(input);
+        expect(parser.properties).toHaveLength(1);
+        expect(parser.properties[0].value).toBe('with lang\n```js\nconsole.log("Hello");\n```');
+    });
+
+    // Hyphenated property name
+    it("parses property with hyphenated name", () => {
+        const input = `custom-key: some value`;
+        const parser = new CodeblockParser(input);
+
+        expect(parser.properties).toHaveLength(1);
+        expect(parser.properties[0].name).toBe("custom-key");
+        expect(parser.properties[0].value).toBe("some value");
+    });
+
+    // Trailing empty lines in input
+    it("parses property and ignores trailing empty lines", () => {
+        const input = `key: value\n\n\n`;
+        const parser = new CodeblockParser(input);
+
+        expect(parser.properties).toHaveLength(1);
+        expect(parser.properties[0].value).toBe("value");
+    });
+
+    // Multiple sequential code blocks in different properties
+    it("parses multiple code blocks in different properties", () => {
+        const input = `
+alpha: start
+\`\`\`
+code A
+\`\`\`
+beta: next
+\`\`\`
+code B
+\`\`\`
+`.trim();
+
+        const parser = new CodeblockParser(input);
+        expect(parser.properties).toHaveLength(2);
+        expect(parser.properties[0].value).toBe("start\n```\ncode A\n```");
+        expect(parser.properties[1].value).toBe("next\n```\ncode B\n```");
+    });
+
+    // Property with only whitespace after colon
+    it("parses property with whitespace-only value", () => {
+        const input = `blank:    `;
+        const parser = new CodeblockParser(input);
+
+        expect(parser.properties).toHaveLength(1);
+        expect(parser.properties[0].name).toBe("blank");
+        expect(parser.properties[0].value).toBe("");
     });
 });
