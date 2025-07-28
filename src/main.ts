@@ -1,8 +1,8 @@
 import { parseCodeBlock } from "codeblock";
 import { compileTemplateString, gatherAndFilterParameters, loadTemplateString, parseTemplateParameters } from "template";
 
+import { CodeblockParser } from "codeblock-parser/parser";
 import { App, MarkdownRenderer, Plugin } from 'obsidian'; // Import Obsidian API classes
-
 
 // Codeblock Processor class
 export class CalloutForgeCodeBlockProcessor {
@@ -20,6 +20,13 @@ export class CalloutForgeCodeBlockProcessor {
 	// Main function to process the code block
 	private async processCodeBlock(source: string, wrapperHtmlElement: HTMLElement, ctx: any): Promise<void> {
 		try {
+			// Test codeblock parser functionality
+			const properties = CodeblockParser.parseProperties(source);
+			for (const property of properties) {
+				console.log(property.toString());
+				console.log();
+			}
+
 			// Set the class name for the wrapper element
 			wrapperHtmlElement.className = "callout-forge-wrapper";
 

@@ -1,3 +1,4 @@
+import { CalloutForgeError } from "errors";
 import { ACCEPTING_STATES, ParserState, TRANSITION_MAP } from "./states";
 import { CodeblockLine, LineMatch, MatchRule, Property, RuleName } from "./types";
 
@@ -64,7 +65,7 @@ export class CodeblockParser {
     constructor(source: string) {
         // Guard input type
         if (typeof source !== "string") {
-            throw new TypeError("Codeblock source must be a string.");
+            throw new CalloutForgeError("Codeblock source must be a string.");
         }
 
         // Trim any leading and trailing spaces
@@ -72,12 +73,15 @@ export class CodeblockParser {
 
         // If the string is empty after trimming, the codeblock has no text
         if (trimmed === "") {
-            throw new Error("Codeblock is empty or has only whitespaces.")
+            throw new CalloutForgeError("Codeblock is empty or has only whitespaces.")
         }
 
-        // If the codeblock has content, it is split in lines and we start parsing
+        // If the codeblock has content, it is split in lines and parsed
         this._lines = trimmed.split('\n');
         this._parse();
+
+        // Then we check for duplicate properties
+        this._validateProperties();
     }
 
     // This method implements the parsing
@@ -134,6 +138,28 @@ export class CodeblockParser {
         }
 
         this._currentState = nextState;
+    }
+
+    /**
+     * Validates the parsed properties and collects all duplicate property names.
+     * Throws an error listing all duplicates if any are found.
+     */
+    private _validateProperties(): void {
+        const seen = new Set<string>();
+        const duplicates = new Set<string>();
+
+        for (const prop of this._parsedProperties) {
+            if (seen.has(prop.name)) {
+                duplicates.add(prop.name);
+            } else {
+                seen.add(prop.name);
+            }
+        }
+
+        if (duplicates.size > 0) {
+            const list = Array.from(duplicates).join(", ");
+            throw new CalloutForgeError(`Duplicate properties found: ${list}`);
+        }
     }
 
     // --- State Handlers ---
@@ -195,7 +221,7 @@ export class CodeblockParser {
         // Save the codefence backticks and update the MatchRule for the "codefence-end" match
         const rule = this._lineMatchers.get("codefence-end");
         if (!rule) {
-            throw new Error("Implementation Error: 'codefence-end' matching rule should exist.");
+            throw new CalloutForgeError("Implementation Error: 'codefence-end' matching rule should exist.");
         }
         rule.regex = new RegExp("^" + this._currentLineMatch.match[1] + "$");
 
@@ -228,7 +254,7 @@ export class CodeblockParser {
         // Reset the "codefence-end" MatchRule.regex to null
         const rule = this._lineMatchers.get("codefence-end");
         if (!rule) {
-            throw new Error("Implementation Error: 'codefence-end' matching rule should exist.");
+            throw new CalloutForgeError("Implementation Error: 'codefence-end' matching rule should exist.");
         }
         rule.regex = null;
 
@@ -253,7 +279,7 @@ export class CodeblockParser {
      * Throws an Error with the stored error message, terminating parsing.
      */
     private _handleError(): void {
-        throw new Error(this._errorMessage ?? "Unknown parsing error.");
+        throw new CalloutForgeError(this._errorMessage ?? "Unknown parsing error.");
     }
 
     // --- Line Helpers ---
@@ -262,7 +288,7 @@ export class CodeblockParser {
     private _getLine(index: number): CodeblockLine {
         // If the index is not valid throw an error
         if (index >= this._lines.length || index < 0) {
-            throw new Error("CodeblockLine index out of bounds.");
+            throw new CalloutForgeError("CodeblockLine index out of bounds.");
         }
         // Otherwise return the requested line
         return { value: this._lines[index].trim(), index }
@@ -286,14 +312,14 @@ export class CodeblockParser {
         }
 
         // If no match was found throw an error, since at least the "any-text" rule should match
-        throw new Error(`Line ${line.index + 1}: could not match line "${line.value}".`);
+        throw new CalloutForgeError(`Line ${line.index + 1}: could not match line "${line.value}".`);
     }
 
     // Method to check if a line is the last of the lines array
     private _isLastLine(index: number): boolean {
         // If the index is negative throw an error
         if (index < 0) {
-            throw new Error("Index must be a positive integer.")
+            throw new CalloutForgeError("Index must be a positive integer.")
         }
 
         return index === (this._lines.length - 1);
@@ -313,7 +339,7 @@ export class CodeblockParser {
     private _updateProperty(): void {
         if (!this._currentProperty) {
             const line = this._getLine(this._currentIndex);
-            throw new Error(`Line ${line.index + 1}: no current property to update for line "${line.value}".`);
+            throw new CalloutForgeError(`Line ${line.index + 1}: no current property to update for line "${line.value}".`);
         }
         this._currentProperty.appendText(this._currentLineMatch.line.value);
     }

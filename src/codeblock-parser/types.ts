@@ -16,6 +16,11 @@ export class Property {
     public appendText(value: string): void {
         this._value += `\n${value}`;
     }
+
+    // Method to print the object
+    public toString(): string {
+        return `${this.name}: ${this._value}`;
+    }
 }
 
 // Type to improve typing of MatchRule
