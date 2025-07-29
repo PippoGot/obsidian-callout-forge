@@ -1,5 +1,5 @@
-import { CodeblockProperty } from 'codeblock-parser/types';
 import { MarkdownRenderer } from 'obsidian';
+import { CodeblockProperty } from 'old-parser/types';
 import { MarkdownRenderedProperty, RenderingContext } from './types';
 
 // Function to render markdown to HTML using Obsidian API

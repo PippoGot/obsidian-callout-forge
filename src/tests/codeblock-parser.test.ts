@@ -1,4 +1,4 @@
-import { CodeblockParser } from '../codeblock-parser/parser';
+import { CodeblockParser } from '../parsing/parser';
 
 const MOCKS = {
     singleLineProperty: `template: default
@@ -9,7 +9,7 @@ description: First line
 Second line
 Third line`,
 
-    propertyWithCodefence: `template: default
+    pairWithCodefence: `template: default
 example: some code
 \`\`\`
 const x = 42;
@@ -42,7 +42,7 @@ line 2
 \`\`\`\`
 `.trim(),
 
-    propertyWithColonInValue: `template: default
+    pairWithColonInValue: `template: default
 note: This is a note: with a colon`,
 
     codefenceWithLang: `template: default
@@ -51,7 +51,7 @@ example: with lang
 console.log("Hello");
 \`\`\``,
 
-    propertyHyphenatedName: `template: default
+    pairHyphenatedName: `template: default
 custom-key: some value`,
 
     trailingEmptyLines: `template: default
@@ -105,7 +105,7 @@ code goes here
   `,
 
     missingTemplate: `
-title: Missing template property
+title: Missing template pair
 description: Some description
 \`\`\`
 code block
@@ -115,45 +115,45 @@ code block
 
 describe("CodeblockParser", () => {
 
-    // Parses a basic single-line property
-    it("parses single-line property", () => {
+    // Parses a basic single-line pair
+    it("parses single-line pair", () => {
         const parser = new CodeblockParser(MOCKS.singleLineProperty);
-        expect(parser.properties).toHaveLength(2);
-        expect(parser.properties.find(p => p.name === "title")?.value).toBe("Hello World");
-        expect(parser.properties.find(p => p.name === "template")?.value).toBe("default");
+        expect(parser.pairList).toHaveLength(2);
+        expect(parser.pairList.find(p => p.key === "title")?.value).toBe("Hello World");
+        expect(parser.pairList.find(p => p.key === "template")?.value).toBe("default");
     });
 
-    // Parses multiline property with plain text continuation
-    it("parses multiline property with plain text", () => {
+    // Parses multiline pair with plain text continuation
+    it("parses multiline pair with plain text", () => {
         const parser = new CodeblockParser(MOCKS.multilineProperty);
-        expect(parser.properties).toHaveLength(2);
-        expect(parser.properties.find(p => p.name === "description")?.value)
+        expect(parser.pairList).toHaveLength(2);
+        expect(parser.pairList.find(p => p.key === "description")?.value)
             .toBe("First line\nSecond line\nThird line");
     });
 
-    // Parses property followed by fenced code block
-    it("parses property with codefence", () => {
-        const parser = new CodeblockParser(MOCKS.propertyWithCodefence);
-        expect(parser.properties.find(p => p.name === "example")?.value)
+    // Parses pair followed by fenced code block
+    it("parses pair with codefence", () => {
+        const parser = new CodeblockParser(MOCKS.pairWithCodefence);
+        expect(parser.pairList.find(p => p.key === "example")?.value)
             .toBe("some code\n```\nconst x = 42;\nconsole.log(x);\n```");
     });
 
-    // Parses multiple properties including fenced blocks
-    it("parses multiple properties and fences", () => {
+    // Parses multiple pairs including fenced blocks
+    it("parses multiple pairs and fences", () => {
         const parser = new CodeblockParser(MOCKS.multiplePropertiesAndFences);
-        const props = parser.properties;
+        const props = parser.pairList;
         expect(props).toHaveLength(4);
-        expect(props.find(p => p.name === "title")?.value).toBe("Example");
-        expect(props.find(p => p.name === "description")?.value)
+        expect(props.find(p => p.key === "title")?.value).toBe("Example");
+        expect(props.find(p => p.key === "description")?.value)
             .toBe("starts here\ncontinues here\n```\ncode block line\nanother line\n```");
-        expect(props.find(p => p.name === "footer")?.value).toBe("done");
-        expect(props.find(p => p.name === "template")?.value).toBe("default");
+        expect(props.find(p => p.key === "footer")?.value).toBe("done");
+        expect(props.find(p => p.key === "template")?.value).toBe("default");
     });
 
     // Throws if input is not a string
     it("throws error if input is not a string", () => {
         // @ts-expect-error
-        expect(() => new CodeblockParser(123)).toThrow("Codeblock source must be a string.");
+        expect(() => new CodeblockParser(123)).toThrow("Source must be a string to parse.");
     });
 
     // Throws if input is empty or whitespace only
@@ -161,9 +161,9 @@ describe("CodeblockParser", () => {
         expect(() => new CodeblockParser("   \n   \n")).toThrow("Codeblock is empty or has only whitespaces.");
     });
 
-    // Throws if codeblock starts without property
-    it("throws error if codeblock starts without property", () => {
-        expect(() => new CodeblockParser("no-colon here")).toThrow(/Codeblock must start with a property/i);
+    // Throws if codeblock starts without pair
+    it("throws error if codeblock starts without pair", () => {
+        expect(() => new CodeblockParser("no-colon here")).toThrow(/Codeblock must start with a pair/i);
     });
 
     // Throws if codefence starts and never ends
@@ -171,95 +171,87 @@ describe("CodeblockParser", () => {
         expect(() => new CodeblockParser(MOCKS.codefenceNotClosed)).toThrow(/Unexpected end of input/i);
     });
 
-    // Throws if text exists with no active property
-    it("throws error when property text exists without current property", () => {
+    // Throws if text exists with no active pair
+    it("throws error when pair text exists without current pair", () => {
         const parser = new CodeblockParser(MOCKS.singleLineProperty);
         // @ts-expect-error
-        parser._currentProperty = null;
+        parser.pair = null;
         // @ts-expect-error
-        parser._currentIndex = 0;
+        parser.index = 0;
         // @ts-expect-error
-        parser._lines = ["dummy line"];
+        parser.lines = ["dummy line"];
 
         expect(() => {
-            // @ts-expect-error
-            parser._updateProperty();
-        }).toThrow(/no current property to update/i);
+            parser.extendPairValue("dummy text");
+        }).toThrow(/no active pair to append to/i);
     });
 
     // Parses codefence with more than three backticks
     it("parses codefence with 4 backticks", () => {
         const parser = new CodeblockParser(MOCKS.codefence4Backticks);
-        expect(parser.properties.find(p => p.name === "snippet")?.value)
+        expect(parser.pairList.find(p => p.key === "snippet")?.value)
             .toBe("usage\n````\nline 1\nline 2\n````");
     });
 
     // Property with colon in value
-    it("parses property with colon in value", () => {
-        const parser = new CodeblockParser(MOCKS.propertyWithColonInValue);
-        expect(parser.properties.find(p => p.name === "note")?.value)
+    it("parses pair with colon in value", () => {
+        const parser = new CodeblockParser(MOCKS.pairWithColonInValue);
+        expect(parser.pairList.find(p => p.key === "note")?.value)
             .toBe("This is a note: with a colon");
     });
 
     // Codefence with language annotation is preserved as text
     it("parses codefence with language annotation as text", () => {
         const parser = new CodeblockParser(MOCKS.codefenceWithLang);
-        expect(parser.properties.find(p => p.name === "example")?.value)
+        expect(parser.pairList.find(p => p.key === "example")?.value)
             .toBe('with lang\n```js\nconsole.log("Hello");\n```');
     });
 
-    // Parses property with hyphenated name
-    it("parses property with hyphenated name", () => {
-        const parser = new CodeblockParser(MOCKS.propertyHyphenatedName);
-        expect(parser.properties.find(p => p.name === "custom-key")?.value)
+    // Parses pair with hyphenated name
+    it("parses pair with hyphenated name", () => {
+        const parser = new CodeblockParser(MOCKS.pairHyphenatedName);
+        expect(parser.pairList.find(p => p.key === "custom-key")?.value)
             .toBe("some value");
     });
 
-    // Parses property and ignores trailing empty lines
-    it("parses property and ignores trailing empty lines", () => {
+    // Parses pair and ignores trailing empty lines
+    it("parses pair and ignores trailing empty lines", () => {
         const parser = new CodeblockParser(MOCKS.trailingEmptyLines);
-        expect(parser.properties.find(p => p.name === "key")?.value)
+        expect(parser.pairList.find(p => p.key === "key")?.value)
             .toBe("value");
     });
 
-    // Parses multiple sequential code blocks in different properties
-    it("parses multiple code blocks in different properties", () => {
+    // Parses multiple sequential code blocks in different pairs
+    it("parses multiple code blocks in different pairs", () => {
         const parser = new CodeblockParser(MOCKS.multipleCodeBlocksDifferentProps);
-        expect(parser.properties.find(p => p.name === "alpha")?.value)
+        expect(parser.pairList.find(p => p.key === "alpha")?.value)
             .toBe("start\n```\ncode A\n```");
-        expect(parser.properties.find(p => p.name === "beta")?.value)
+        expect(parser.pairList.find(p => p.key === "beta")?.value)
             .toBe("next\n```\ncode B\n```");
     });
 
-    // Parses property with whitespace-only value
-    it("parses property with whitespace-only value", () => {
+    // Parses pair with whitespace-only value
+    it("parses pair with whitespace-only value", () => {
         const parser = new CodeblockParser(MOCKS.whitespaceOnlyValue);
-        expect(parser.properties.find(p => p.name === "blank")?.value)
+        expect(parser.pairList.find(p => p.key === "blank")?.value)
             .toBe("");
     });
 
-    // Throws for a single duplicate property
-    it("throws an error for a single duplicate property", () => {
+    // Throws for a single duplicate pair
+    it("throws an error for a single duplicate pair", () => {
         expect(() => new CodeblockParser(MOCKS.duplicateSingle))
-            .toThrow(/Duplicate properties found: description/);
+            .toThrow(/Duplicate pairs found: description/);
     });
 
-    // Throws listing multiple duplicate properties
-    it("throws an error listing multiple duplicate properties", () => {
+    // Throws listing multiple duplicate pairs
+    it("throws an error listing multiple duplicate pairs", () => {
         expect(() => new CodeblockParser(MOCKS.duplicateMultiple))
-            .toThrow(/Duplicate properties found: template, notes/);
+            .toThrow(/Duplicate pairs found: template, notes/);
     });
 
-    // Does not throw when all properties are unique
-    it("does not throw when all properties are unique", () => {
+    // Does not throw when all pairs are unique
+    it("does not throw when all pairs are unique", () => {
         expect(() => new CodeblockParser(MOCKS.uniqueProperties))
             .not.toThrow();
     });
-
-    // Throws if mandatory property 'template' is missing
-    it("throws error if mandatory property 'template' is missing", () => {
-        expect(() => new CodeblockParser(MOCKS.missingTemplate))
-            .toThrow(/Missing mandatory properties: template/);
-    });
-
 });

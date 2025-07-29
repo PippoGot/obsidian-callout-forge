@@ -2,8 +2,8 @@ import { loadTemplateString } from "template/file-loader";
 
 import { App, MarkdownPostProcessorContext, Plugin, sanitizeHTMLToDom } from 'obsidian';
 
-import { CodeblockParser } from "codeblock-parser/parser";
-import { normalizeCodeblockProperties } from "codeblock-parser/types";
+import { CodeblockParser } from "old-parser/parser";
+import { normalizeCodeblockProperties } from "old-parser/types";
 import { renderCodeblockProperties } from "rendering/renderer";
 import { Template } from "template/template";
 import { CalloutForgeError } from "utils/errors";
