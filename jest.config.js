@@ -10,7 +10,6 @@ module.exports = {
         },
     },
     moduleNameMapper: {
-        '^template-module/(.*)$': '<rootDir>/src/template-module/$1',
-        '^errors$': '<rootDir>/src/errors.ts',
+        '^obsidian$': '<rootDir>/__mocks__/obsidian.js',
     }
 };

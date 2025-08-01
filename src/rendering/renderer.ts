@@ -1,9 +1,8 @@
 import { MarkdownRenderer } from 'obsidian';
-import { CodeblockProperty } from 'old-parser/types';
-import { MarkdownRenderedProperty, RenderingContext } from './types';
+import { ObsidianRenderingContext } from './types';
 
 // Function to render markdown to HTML using Obsidian API
-export async function renderMarkdownString(markdownSource: string, context: RenderingContext): Promise<string> {
+export async function renderMarkdownString(markdownSource: string, context: ObsidianRenderingContext): Promise<string> {
     // Create a dummy div element to render into
     const htmlDummy = document.createElement("div");
 
@@ -15,15 +14,4 @@ export async function renderMarkdownString(markdownSource: string, context: Rend
 
     // Return the serialized element
     return serializer.serializeToString(htmlDummy);
-}
-
-export async function renderCodeblockProperties(properties: CodeblockProperty[], context: RenderingContext): Promise<MarkdownRenderedProperty[]> {
-    let renderedProperties: MarkdownRenderedProperty[] = [];
-    for (const property of properties) {
-        const renderedValue = await renderMarkdownString(property.value, context);
-        const renderedProperty = new MarkdownRenderedProperty(property.name, renderedValue);
-        renderedProperties.push(renderedProperty);
-    }
-
-    return renderedProperties;
 }

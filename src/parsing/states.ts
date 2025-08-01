@@ -1,5 +1,6 @@
+import { Pair } from "../rendering/pair";
 import { CalloutForgeError } from "../utils/errors";
-import { JumpCondition, JumpMap, Pair } from "./match";
+import { JumpCondition, JumpMap } from "./match";
 import { CodeblockParser } from "./parser";
 
 export const enum StateType {
@@ -9,47 +10,46 @@ export const enum StateType {
     Normal,     // A normal state is neither of the above
 }
 
-
 export abstract class ParserState {
     // Map of states to jump based on the condition
     protected jumpMap?: JumpMap;
     // The type of the state, default to normal
     protected stateType: StateType = StateType.Normal;
 
-    constructor(protected context: CodeblockParser) { }
+    constructor(protected parent: CodeblockParser) { }
 
     public abstract handle(): void;
 
     protected jump(): void {
         // If last line
-        if (this.context.isLastLine()) {
+        if (this.parent.isLastLine()) {
             // And state is accepting
             if (this.stateType === StateType.Accepting) {
                 // Move to the final state
-                this.context.setState(new CodeblockEndState(this.context));
+                this.parent.setState(new CodeblockEndState(this.parent));
                 return;
             }
             // Otherwise should throw an error
-            this.context.errorMsg = `Unexpected end of input: ${this.toString()} is not an accepting state.`;
-            this.context.setState(new ParsingErrorState(this.context));
+            this.parent.errorMsg = `Unexpected end of input: ${this.toString()} is not an accepting state.`;
+            this.parent.setState(new ParsingErrorState(this.parent));
             return
         }
 
         // Otherwise increment and get next match
-        this.context.incrementIndex();
-        this.context.matchCurrentLine();
-        const nextMatch = this.context.getMatch();
+        this.parent.incrementIndex();
+        this.parent.matchCurrentLine();
+        const nextMatch = this.parent.getMatch();
 
         // Then get next state from the jump map
         const nextState = this.jumpMap?.[nextMatch.rule.jumpTo];
         if (nextState) {
-            this.context.setState(new nextState(this.context))
+            this.parent.setState(new nextState(this.parent))
             return;
         }
 
         // If there is no mapping, should throw an error
-        this.context.errorMsg = `Invalid input transition: ${JumpCondition[nextMatch.rule.jumpTo]} jump condition has no mapping in ${this.toString()}.`;
-        this.context.setState(new ParsingErrorState(this.context));
+        this.parent.errorMsg = `Invalid input transition: ${JumpCondition[nextMatch.rule.jumpTo]} jump condition has no mapping in ${this.toString()}.`;
+        this.parent.setState(new ParsingErrorState(this.parent));
     }
 
     public toString(): string { return this.constructor.name; }
@@ -70,14 +70,14 @@ export class CodeblockStartState extends ParserState {
     }
 
     protected override jump(): void {
-        const match = this.context.getMatch();
+        const match = this.parent.getMatch();
         const nextState = this.jumpMap?.[match.rule.jumpTo];
         if (nextState) {
-            this.context.setState(new nextState(this.context))
+            this.parent.setState(new nextState(this.parent))
             return;
         }
-        this.context.errorMsg = "Codeblock must start with a pair.";
-        this.context.setState(new ParsingErrorState(this.context));
+        this.parent.errorMsg = "Codeblock must start with a pair.";
+        this.parent.setState(new ParsingErrorState(this.parent));
     }
 
     protected override jumpMap: JumpMap = {
@@ -95,9 +95,9 @@ export class PairState extends ParserState {
 
     public handle(): void {
         // Handle current line
-        const match = this.context.getMatch();
-        const pair = new Pair(match.matchResult[1], match.matchResult[2]);
-        this.context.newPair(pair);
+        const match = this.parent.getMatch();
+        const pair = new Pair(match.matchResult[1], match.matchResult[2], this.parent.context);
+        this.parent.newPair(pair);
 
         // Jump to next state
         this.jump();
@@ -120,8 +120,8 @@ export class PairContentState extends ParserState {
 
     public handle(): void {
         // Handle current line
-        const match = this.context.getMatch();
-        this.context.extendPairValue(match.lineContent);
+        const match = this.parent.getMatch();
+        this.parent.extendPairValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -142,9 +142,9 @@ export class PairContentState extends ParserState {
 export class NestedStartState extends ParserState {
     public handle(): void {
         // Handle current line
-        const match = this.context.getMatch();
-        this.context.setCodefenceRegex(match.matchResult[1]);
-        this.context.extendPairValue(match.lineContent);
+        const match = this.parent.getMatch();
+        this.parent.setCodefenceRegex(match.matchResult[1]);
+        this.parent.extendPairValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -166,8 +166,8 @@ export class NestedStartState extends ParserState {
 export class NestedContentState extends ParserState {
     public handle(): void {
         // Handle current line
-        const match = this.context.getMatch();
-        this.context.extendPairValue(match.lineContent);
+        const match = this.parent.getMatch();
+        this.parent.extendPairValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -191,9 +191,9 @@ export class NestedEndState extends ParserState {
 
     public handle(): void {
         // Handle current line
-        const match = this.context.getMatch();
-        this.context.clearCodefenceRegex();
-        this.context.extendPairValue(match.lineContent);
+        const match = this.parent.getMatch();
+        this.parent.clearCodefenceRegex();
+        this.parent.extendPairValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -215,7 +215,7 @@ export class CodeblockEndState extends ParserState {
 
     public handle(): void {
         // Handle current line
-        this.context.storePair();
+        this.parent.storePair();
 
         // No jump, this is a closing state
     }
@@ -230,7 +230,7 @@ export class ParsingErrorState extends ParserState {
 
     public handle(): void {
         // Handle error
-        const msg = this.context.errorMsg;
+        const msg = this.parent.errorMsg;
         throw new CalloutForgeError(msg);
     }
 }

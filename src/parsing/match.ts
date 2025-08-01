@@ -27,12 +27,3 @@ export interface LineMatch {
     lineIndex: number;
     matchResult: RegExpExecArray;
 }
-
-// TODO: move to appropriate module
-export class Pair {
-    constructor(public readonly key: string, private _value: string) { }
-
-    get value() { return this._value }
-    extend(value: string): void { this._value += `\n${value}` }
-    toString(): string { return `${this.key}:\n${this._value}` }
-}
