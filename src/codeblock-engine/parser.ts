@@ -1,5 +1,5 @@
-import { Pair } from "../rendering/pair";
-import { ObsidianRenderingContext } from "../rendering/types";
+import { Pair } from "../rendering-engine/pair";
+import { ObsidianRenderingContext } from "../rendering-engine/types";
 import { CalloutForgeError } from "../utils/errors";
 import { JumpCondition, LineMatch, MATCHERS } from "./match";
 import * as st from "./states";

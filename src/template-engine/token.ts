@@ -1,4 +1,4 @@
-import { Pair } from "../rendering/pair";
+import { Pair } from "../rendering-engine/pair";
 import { CalloutForgeError } from "../utils/errors";
 
 export type TokenType = "text" | "handlebar";

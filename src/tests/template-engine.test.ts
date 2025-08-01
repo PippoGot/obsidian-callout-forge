@@ -1,10 +1,10 @@
-import { Pair } from "../rendering/pair";
+import { Pair } from "../rendering-engine/pair";
 import { TemplateParser } from "../template-engine/parser";
 import { FallbackToken, OptionalToken, RequiredToken, TextToken } from "../template-engine/token";
 import { CalloutForgeError } from "../utils/errors";
 
 // Mock renderer so Pair.render() produces predictable HTML output
-jest.mock("../rendering/renderer", () => ({
+jest.mock("../rendering-engine/renderer", () => ({
     renderMarkdownString: jest.fn(async (value: string) => `<p>${value}</p>`)
 }));
 

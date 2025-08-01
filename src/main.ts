@@ -1,12 +1,12 @@
-import { loadTemplateString } from "template/file-loader";
+import { loadTemplateString } from "template-engine/file-loader";
 
 import { App, MarkdownPostProcessorContext, Plugin, sanitizeHTMLToDom } from 'obsidian';
 
-import { CodeblockParser } from "old-parser/parser";
-import { normalizeCodeblockProperties } from "old-parser/types";
-import { renderCodeblockProperties } from "rendering/renderer";
-import { Template } from "template/template";
 import { CalloutForgeError } from "utils/errors";
+
+import { CodeblockParser } from "codeblock-engine/parser";
+import { ObsidianRenderingContext } from "rendering-engine/types";
+import { TemplateParser } from "template-engine/parser";
 
 // Codeblock Processor class
 export class CalloutForgeCodeBlockProcessor {
@@ -25,11 +25,12 @@ export class CalloutForgeCodeBlockProcessor {
 	private async processCodeBlock(source: string, wrapperHtmlElement: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> {
 		try {
 			// Order of operations:
-			// 1) Parse codeblock to extract properties
-			const properties = CodeblockParser.parseProperties(source);
+			// 1) Parse codeblock to extract pairs (key: markdown value)
+			const context: ObsidianRenderingContext = { app: this.app, plugin: this.plugin, sourcePath: ctx.sourcePath };
+			const pairs = CodeblockParser.fromString(source, context);
 
 			// 2) Obtain filepath of the requested template
-			const filename = properties.find(property => property.name === "template");
+			const filename = pairs.find(pair => pair.key === "template");
 			if (!filename) {
 				throw new CalloutForgeError("Codeblock has no template property.");
 			}
@@ -37,24 +38,21 @@ export class CalloutForgeCodeBlockProcessor {
 			// 3) Read the HTML template
 			const templateString = await loadTemplateString(this.app, `${this.plugin.HTMLFolderPath}/${filename.value}.html`);
 
-			// 4) Parse template to extract template tokens
-			const template = Template.fromString(templateString);
-			const tokens = template.tokens;
+			// 4) Parse template string to obtain Template object
+			const template = TemplateParser.fromString(templateString);
 
-			// 5) Filter properties to keep only the ones in the template
-			const normalizedProperties = normalizeCodeblockProperties(properties, tokens);
+			// 5) Compile the template using the rendered value obtained from the codeblock
+			// this method ignores pairs not appearing in the template string
+			// throws error if a value is not provided (either by codeblock or fallback)
+			// renders the markdown content using obsidian API
+			// substitutes the values accordingly
+			// and finally joins the text in a single string
+			const compiledTemplate = await template.compile(pairs);
 
-			// 6) Render property values from markdown to HTML using obsidian API
-			const context = { app: this.app, plugin: this.plugin, sourcePath: ctx.sourcePath };
-			const renderedProperties = await renderCodeblockProperties(normalizedProperties, context);
+			// 6) Sanitize the compiled HTML string
+			const sanitizedTemplate = sanitizeHTMLToDom(compiledTemplate);
 
-			// 7) Replace the rendered content in the placeholders
-			const filledTemplate = template.fill(renderedProperties);
-
-			// 8) Sanitize the compiled HTML string
-			const sanitizedTemplate = sanitizeHTMLToDom(filledTemplate);
-
-			// 9) Render the final element
+			// 7) Render the final element
 			wrapperHtmlElement.className = "callout-forge-wrapper";
 			wrapperHtmlElement.appendChild(sanitizedTemplate);
 		}

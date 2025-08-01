@@ -1,4 +1,4 @@
-import { CodeblockParser } from '../parsing/parser';
+import { CodeblockParser } from '../codeblock-engine/parser';
 
 const MOCKS = {
     singleLineProperty: `template: default

@@ -12,6 +12,12 @@ export class TemplateParser {
         this.parse();
     }
 
+    // Static method to obtain a Tmeplate from a source string
+    public static fromString(source: string): Template {
+        const parser = new TemplateParser(source);
+        return parser.template;
+    }
+
     // Parse the source string to obtain a list of tokens
     private parse(): void {
         // Get the regex with all the syntax rules

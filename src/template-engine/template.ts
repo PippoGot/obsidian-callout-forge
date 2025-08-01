@@ -1,4 +1,4 @@
-import { Pair } from "../rendering/pair";
+import { Pair } from "../rendering-engine/pair";
 import { HandlebarToken, TextToken, Token } from "./token";
 
 export class Template {
