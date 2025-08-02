@@ -1,15 +1,7 @@
-import { Pair } from "../rendering-engine/pair";
+import { Pair } from "../codeblock-engine/pair";
 import { TemplateParser } from "../template-engine/parser";
 import { FallbackToken, OptionalToken, RequiredToken, TextToken } from "../template-engine/token";
 import { CalloutForgeError } from "../utils/errors";
-
-// Mock renderer so Pair.render() produces predictable HTML output
-jest.mock("../rendering-engine/renderer", () => ({
-    renderMarkdownString: jest.fn(async (value: string) => `<p>${value}</p>`)
-}));
-
-// Dummy rendering context (actual contents not relevant for these tests)
-const mockContext = {} as any;
 
 describe("TemplateParser", () => {
 
@@ -55,47 +47,46 @@ describe("TemplateParser", () => {
 
 describe("Template.compile", () => {
 
-    // Replaces required token with rendered Pair value
-    it("replaces required handlebar with pair value", async () => {
+    // Replaces required token with matching Pair value
+    it("replaces required handlebar with pair value", () => {
         const parser = new TemplateParser("Hello {{ name }}!");
         const template = parser.template;
 
-        const pairs = [new Pair("name", "Alice", mockContext)];
-        const result = await template.compile(pairs);
+        const pairs = [new Pair("name", "Alice")];
+        const result = template.compile(pairs);
 
-        expect(result).toBe("Hello <p>Alice</p>!");
+        expect(result).toBe('Hello <div class="cf-markdown">Alice</div>!');
     });
 
     // Uses fallback value when pair is missing
-    it("uses fallback for fallback token when no pair is provided", async () => {
+    it("uses fallback for fallback token when no pair is provided", () => {
         const parser = new TemplateParser("Hello {{ name | Stranger }}!");
-        const result = await parser.template.compile([]);
+        const result = parser.template.compile([]);
 
         expect(result).toBe("Hello Stranger!");
     });
 
     // Uses empty string for missing optional token
-    it("uses empty string for optional token when no pair is provided", async () => {
+    it("uses empty string for optional token when no pair is provided", () => {
         const parser = new TemplateParser("Hello {{ name? }}!");
-        const result = await parser.template.compile([]);
+        const result = parser.template.compile([]);
 
         expect(result).toBe("Hello !");
     });
 
     // Throws when required token has no matching pair
-    it("throws error when required pair is missing", async () => {
+    it("throws error when required pair is missing", () => {
         const parser = new TemplateParser("Hello {{ name }}!");
-        await expect(parser.template.compile([]))
-            .rejects
-            .toThrow(CalloutForgeError);
+        expect(() => parser.template.compile([]))
+            .toThrow(new CalloutForgeError('Missing value for required key "name"'));
     });
 
     // Compiles multiple tokens in correct order
-    it("renders multiple tokens in correct order", async () => {
+    it("renders multiple tokens in correct order", () => {
         const parser = new TemplateParser("{{ greeting }} {{ name | Stranger }}!");
-        const pairs = [new Pair("greeting", "Hi", mockContext)];
-        const result = await parser.template.compile(pairs);
+        const pairs = [new Pair("greeting", "Hi")];
+        const result = parser.template.compile(pairs);
 
-        expect(result).toBe("<p>Hi</p> Stranger!");
+        expect(result).toBe('<div class="cf-markdown">Hi</div> Stranger!');
     });
 });

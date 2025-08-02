@@ -1,6 +1,6 @@
-import { Pair } from "../rendering-engine/pair";
 import { CalloutForgeError } from "../utils/errors";
 import { JumpCondition, JumpMap } from "./match";
+import { Pair } from "./pair";
 import { CodeblockParser } from "./parser";
 
 export const enum StateType {
@@ -96,7 +96,7 @@ export class PairState extends ParserState {
     public handle(): void {
         // Handle current line
         const match = this.parent.getMatch();
-        const pair = new Pair(match.matchResult[1], match.matchResult[2], this.parent.context);
+        const pair = new Pair(match.matchResult[1], match.matchResult[2]);
         this.parent.newPair(pair);
 
         // Jump to next state

@@ -1,7 +1,6 @@
-import { Pair } from "../rendering-engine/pair";
-import { ObsidianRenderingContext } from "../rendering-engine/types";
 import { CalloutForgeError } from "../utils/errors";
 import { JumpCondition, LineMatch, MATCHERS } from "./match";
+import { Pair } from "./pair";
 import * as st from "./states";
 
 export class CodeblockParser {
@@ -19,7 +18,7 @@ export class CodeblockParser {
     private match: LineMatch;
 
     // Constructor
-    constructor(source: string, readonly context: ObsidianRenderingContext) {
+    constructor(source: string) {
         // Guard source type is a string
         if (typeof source !== "string") throw new CalloutForgeError("Source must be a string to parse.");
 
@@ -47,8 +46,8 @@ export class CodeblockParser {
     // Methods
 
     // Static parse from a string
-    public static fromString(source: string, context: ObsidianRenderingContext): Pair[] {
-        const parser = new CodeblockParser(source, context);
+    public static fromString(source: string): Pair[] {
+        const parser = new CodeblockParser(source);
         return parser.pairList;
     }
 

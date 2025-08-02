@@ -1,12 +1,10 @@
 import { loadTemplateString } from "template-engine/file-loader";
 
-import { App, MarkdownPostProcessorContext, Plugin, sanitizeHTMLToDom } from 'obsidian';
-
-import { CalloutForgeError } from "utils/errors";
+import { App, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, sanitizeHTMLToDom } from 'obsidian';
 
 import { CodeblockParser } from "codeblock-engine/parser";
-import { ObsidianRenderingContext } from "rendering-engine/types";
 import { TemplateParser } from "template-engine/parser";
+import { CalloutForgeError } from "utils/errors";
 
 // Codeblock Processor class
 export class CalloutForgeCodeBlockProcessor {
@@ -26,8 +24,7 @@ export class CalloutForgeCodeBlockProcessor {
 		try {
 			// Order of operations:
 			// 1) Parse codeblock to extract pairs (key: markdown value)
-			const context: ObsidianRenderingContext = { app: this.app, plugin: this.plugin, sourcePath: ctx.sourcePath };
-			const pairs = CodeblockParser.fromString(source, context);
+			const pairs = CodeblockParser.fromString(source);
 
 			// 2) Obtain filepath of the requested template
 			const filename = pairs.find(pair => pair.key === "template");
@@ -44,17 +41,25 @@ export class CalloutForgeCodeBlockProcessor {
 			// 5) Compile the template using the rendered value obtained from the codeblock
 			// this method ignores pairs not appearing in the template string
 			// throws error if a value is not provided (either by codeblock or fallback)
-			// renders the markdown content using obsidian API
-			// substitutes the values accordingly
+			// wraps the markdown in a div with a special class to later render it
+			// substitutes the values accordingly with the placeholders
 			// and finally joins the text in a single string
-			const compiledTemplate = await template.compile(pairs);
+			const compiledTemplate = template.compile(pairs);
 
-			// 6) Sanitize the compiled HTML string
+			// 6) Sanitize the compiled HTML string and builds the DOM
 			const sanitizedTemplate = sanitizeHTMLToDom(compiledTemplate);
 
-			// 7) Render the final element
+			// 7) Append the constructed DOM to the wrapper element of this plugin
 			wrapperHtmlElement.className = "callout-forge-wrapper";
 			wrapperHtmlElement.appendChild(sanitizedTemplate);
+
+			// 8) Finally renders the markdown elements wrapped by the special div
+			const mdBlocks = wrapperHtmlElement.querySelectorAll<HTMLElement>(".cf-markdown");
+			for (const block of Array.from(mdBlocks)) {
+				const mdSource = block.textContent ?? "";
+				block.empty();
+				await MarkdownRenderer.render(this.app, mdSource, block, ctx.sourcePath, this.plugin);
+			}
 		}
 		catch (error) {
 			// If an error occurs, log it and throw a CalloutForgeError
