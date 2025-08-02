@@ -57,8 +57,11 @@ export class CalloutForgeCodeBlockProcessor {
 			const mdBlocks = wrapperHtmlElement.querySelectorAll<HTMLElement>(".cf-markdown");
 			for (const block of Array.from(mdBlocks)) {
 				const mdSource = block.textContent ?? "";
-				block.empty();
-				await MarkdownRenderer.render(this.app, mdSource, block, ctx.sourcePath, this.plugin);
+				const temp = document.createElement("div");
+
+				await MarkdownRenderer.render(this.app, mdSource, temp, ctx.sourcePath, this.plugin);
+
+				block.replaceWith(...Array.from(temp.childNodes));
 			}
 		}
 		catch (error) {
