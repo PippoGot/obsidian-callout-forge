@@ -1,4 +1,4 @@
-import { Pair } from "../rendering-engine/pair";
+import { Pair } from "../codeblock-engine/pair";
 import { CalloutForgeError } from "../utils/errors";
 
 export type TokenType = "text" | "handlebar";
@@ -21,10 +21,10 @@ export class HandlebarToken extends AbstractToken {
     constructor(public readonly key: string) { super("handlebar"); }
 
     // Return the corresponding TextToken given a Pair object
-    async normalize(pair?: Pair): Promise<TextToken> {
+    normalize(pair?: Pair): TextToken {
         // Pair is given, use Pair value
         if (pair) {
-            return new TextToken(await pair.render());
+            return new TextToken(pair.wrap());
         }
 
         // Pair is not given and HandlebarToken has a fallback, use fallpack value

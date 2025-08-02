@@ -9,7 +9,4 @@ module.exports = {
             tsconfig: 'tsconfig.json',
         },
     },
-    moduleNameMapper: {
-        '^obsidian$': '<rootDir>/__mocks__/obsidian.js',
-    }
 };
