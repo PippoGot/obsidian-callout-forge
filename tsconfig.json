@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "inlineSourceMap": true,
     "inlineSources": true,
-    "module": "ESNext",
+    "module": "CommonJS",
     "target": "ES6",
     "allowJs": true,
     "noImplicitAny": true,
@@ -16,9 +16,10 @@
       "ES5",
       "ES6",
       "ES7"
-    ]
+    ],
+    "paths": {}
   },
   "include": [
-    "**/*.ts"
+    "src/**/*.ts"
   ]
 }
