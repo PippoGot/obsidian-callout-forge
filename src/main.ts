@@ -1,8 +1,7 @@
-import { loadTemplateString } from "template-engine/file-loader";
-
 import { App, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, sanitizeHTMLToDom } from 'obsidian';
 
 import { CodeblockParser } from "codeblock-engine/parser";
+import { loadTemplateString } from "template-engine/file-loader";
 import { TemplateParser } from "template-engine/parser";
 import { CalloutForgeError } from "utils/errors";
 
@@ -80,8 +79,6 @@ export class CalloutForgeCodeBlockProcessor {
 export default class CalloutForgePlugin extends Plugin {
 	pluginFolderPath = this.manifest.dir;				// Path to the plugin folder
 	HTMLFolderPath = `${this.pluginFolderPath}/HTML`;	// Path to the HTML templates folder
-
-	templateHTML: string = "";							// Placeholder for template HTML
 
 	// Called when the plugin is loaded
 	async onload() {
