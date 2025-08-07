@@ -1,4 +1,3 @@
-import { Pair } from "../codeblock-engine/pair";
 import { TemplateParser } from "../template-engine/parser";
 import { FallbackToken, OptionalToken, RequiredToken, TextToken } from "../template-engine/token";
 import { CalloutForgeError } from "../utils/errors";

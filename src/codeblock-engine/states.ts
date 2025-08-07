@@ -1,7 +1,7 @@
 import { CalloutForgeError } from "../utils/errors";
 import { JumpCondition, JumpMap } from "./match";
-import { Pair } from "./pair";
 import { CodeblockParser } from "./parser";
+import { CodeblockProperty } from "./property";
 
 export const enum StateType {
     Initial,    // An initial state is the first state the system is initialized to
@@ -60,7 +60,7 @@ export abstract class ParserState {
  * Handles the CodeblockStart state.
  * This is the initial state and advances the parser to the next state
  * without consuming the current line (index not incremented).
- * Only Pair is accepted as next state.
+ * Only CodeblockProperty is accepted as next state.
  */
 export class CodeblockStartState extends ParserState {
     protected stateType = StateType.Initial;
@@ -81,32 +81,32 @@ export class CodeblockStartState extends ParserState {
     }
 
     protected override jumpMap: JumpMap = {
-        [JumpCondition.Pair]: PairState,
+        [JumpCondition.Property]: CodeblockPropertyState,
     };
 }
 
 /**
- * Handles the Pair state.
- * Stores the previous pair (if any) and creates a new Pair
+ * Handles the CodeblockProperty state.
+ * Stores the previous pair (if any) and creates a new CodeblockProperty
  * from the current line match, then advances to the next state.
  */
-export class PairState extends ParserState {
+export class CodeblockPropertyState extends ParserState {
     protected stateType = StateType.Accepting;
 
     public handle(): void {
         // Handle current line
         const match = this.parent.getMatch();
-        const pair = new Pair(match.matchResult[1], match.matchResult[2]);
-        this.parent.newPair(pair);
+        const pair = new CodeblockProperty(match.matchResult[1], match.matchResult[2]);
+        this.parent.newCodeblockProperty(pair);
 
         // Jump to next state
         this.jump();
     }
 
     protected override jumpMap: JumpMap = {
-        [JumpCondition.Pair]: PairState,
+        [JumpCondition.Property]: CodeblockPropertyState,
         [JumpCondition.NestedStart]: NestedStartState,
-        [JumpCondition.Text]: PairContentState,
+        [JumpCondition.Text]: CodeblockPropertyContentState,
     };
 }
 
@@ -115,22 +115,22 @@ export class PairState extends ParserState {
  * Appends the current line text to the existing pair,
  * then advances to the next state.
  */
-export class PairContentState extends ParserState {
+export class CodeblockPropertyContentState extends ParserState {
     protected stateType = StateType.Accepting;
 
     public handle(): void {
         // Handle current line
         const match = this.parent.getMatch();
-        this.parent.extendPairValue(match.lineContent);
+        this.parent.extendCodeblockPropertyValue(match.lineContent);
 
         // Jump to next state
         this.jump();
     }
 
     protected override jumpMap: JumpMap = {
-        [JumpCondition.Pair]: PairState,
+        [JumpCondition.Property]: CodeblockPropertyState,
         [JumpCondition.NestedStart]: NestedStartState,
-        [JumpCondition.Text]: PairContentState,
+        [JumpCondition.Text]: CodeblockPropertyContentState,
     };
 }
 
@@ -144,7 +144,7 @@ export class NestedStartState extends ParserState {
         // Handle current line
         const match = this.parent.getMatch();
         this.parent.setCodefenceRegex(match.matchResult[1]);
-        this.parent.extendPairValue(match.lineContent);
+        this.parent.extendCodeblockPropertyValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -152,7 +152,7 @@ export class NestedStartState extends ParserState {
 
     protected override jumpMap: JumpMap = {
         [JumpCondition.NestedEnd]: NestedEndState,
-        [JumpCondition.Pair]: NestedContentState,
+        [JumpCondition.Property]: NestedContentState,
         [JumpCondition.NestedStart]: NestedContentState,
         [JumpCondition.Text]: NestedContentState,
     };
@@ -167,7 +167,7 @@ export class NestedContentState extends ParserState {
     public handle(): void {
         // Handle current line
         const match = this.parent.getMatch();
-        this.parent.extendPairValue(match.lineContent);
+        this.parent.extendCodeblockPropertyValue(match.lineContent);
 
         // Jump to next state
         this.jump();
@@ -175,7 +175,7 @@ export class NestedContentState extends ParserState {
 
     protected override jumpMap: JumpMap = {
         [JumpCondition.NestedEnd]: NestedEndState,
-        [JumpCondition.Pair]: NestedContentState,
+        [JumpCondition.Property]: NestedContentState,
         [JumpCondition.NestedStart]: NestedContentState,
         [JumpCondition.Text]: NestedContentState,
     };
@@ -193,16 +193,16 @@ export class NestedEndState extends ParserState {
         // Handle current line
         const match = this.parent.getMatch();
         this.parent.clearCodefenceRegex();
-        this.parent.extendPairValue(match.lineContent);
+        this.parent.extendCodeblockPropertyValue(match.lineContent);
 
         // Jump to next state
         this.jump();
     }
 
     protected override jumpMap: JumpMap = {
-        [JumpCondition.Pair]: PairState,
+        [JumpCondition.Property]: CodeblockPropertyState,
         [JumpCondition.NestedStart]: NestedStartState,
-        [JumpCondition.Text]: PairContentState,
+        [JumpCondition.Text]: CodeblockPropertyContentState,
     };
 }
 
@@ -215,7 +215,7 @@ export class CodeblockEndState extends ParserState {
 
     public handle(): void {
         // Handle current line
-        this.parent.storePair();
+        this.parent.storeCodeblockProperty();
 
         // No jump, this is a closing state
     }

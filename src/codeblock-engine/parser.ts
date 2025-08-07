@@ -1,27 +1,25 @@
 import { CalloutForgeError } from "../utils/errors";
+import { Codeblock, CodeblockSource } from "../utils/types";
 import { JumpCondition, LineMatch, MATCHERS } from "./match";
-import { Pair } from "./pair";
+import { CodeblockProperty } from "./property";
 import * as st from "./states";
 
 export class CodeblockParser {
     // Quasi-static variables
     private lines: string[];
     private matchers = new Map(MATCHERS);
-    private pairs: Pair[] = [];
-    get pairList(): Pair[] { return this.pairs; }
+    private pairs: CodeblockProperty[] = [];
+    get pairList(): CodeblockProperty[] { return this.pairs; }
     public errorMsg: string;
 
     // Dynamic variables
     private index: number = 0;
     private state: st.ParserState;
-    private pair: Pair | null = null;
+    private pair: CodeblockProperty | null = null;
     private match: LineMatch;
 
     // Constructor
-    constructor(source: string) {
-        // Guard source type is a string
-        if (typeof source !== "string") throw new CalloutForgeError("Source must be a string to parse.");
-
+    constructor(source: CodeblockSource) {
         // Trims the input
         const trimmedSource = source.trim();
 
@@ -40,15 +38,15 @@ export class CodeblockParser {
         this.state.handle();
 
         // Validate parsed properties to check for duplicates
-        this.validatePairs();
+        this.validateCodeblockPropertys();
     }
 
     // Methods
 
     // Static parse from a string
-    public static fromString(source: string): Pair[] {
+    public static fromString(source: CodeblockSource): Codeblock {
         const parser = new CodeblockParser(source);
-        return parser.pairList;
+        return parser.pairList as Codeblock;
     }
 
     // Set the next state of the machine
@@ -57,13 +55,13 @@ export class CodeblockParser {
     }
 
     // Push a new pair in the active pair, storing the currently active if any
-    public newPair(pair: Pair): void {
-        this.storePair();
+    public newCodeblockProperty(pair: CodeblockProperty): void {
+        this.storeCodeblockProperty();
         this.pair = pair;
     }
 
     // Store the currently active pair, if any
-    public storePair(): void {
+    public storeCodeblockProperty(): void {
         if (this.pair) {
             this.pairs.push(this.pair);
             this.pair = null;
@@ -71,7 +69,7 @@ export class CodeblockParser {
     }
 
     // Extends the currently active pair value
-    public extendPairValue(line: string): void {
+    public extendCodeblockPropertyValue(line: string): void {
         if (!this.pair) {
             throw new CalloutForgeError(`Line ${this.index + 1}: no active pair to append to.`);
         }
@@ -122,15 +120,15 @@ export class CodeblockParser {
     }
 
     // Validate parsed pairs to check for duplicates
-    private validatePairs(): void {
-        const seenPairs = new Set<string>();
-        const duplicatePairs = new Set<string>();
+    private validateCodeblockPropertys(): void {
+        const seenCodeblockPropertys = new Set<string>();
+        const duplicateCodeblockPropertys = new Set<string>();
 
         for (const pair of this.pairs) {
-            seenPairs.has(pair.key) ? duplicatePairs.add(pair.key) : seenPairs.add(pair.key);
+            seenCodeblockPropertys.has(pair.key) ? duplicateCodeblockPropertys.add(pair.key) : seenCodeblockPropertys.add(pair.key);
         }
-        if (duplicatePairs.size > 0) {
-            throw new CalloutForgeError(`Duplicate pairs found: ${[...duplicatePairs].join(", ")}`)
+        if (duplicateCodeblockPropertys.size > 0) {
+            throw new CalloutForgeError(`Duplicate pairs found: ${[...duplicateCodeblockPropertys].join(", ")}`)
         }
     }
 }

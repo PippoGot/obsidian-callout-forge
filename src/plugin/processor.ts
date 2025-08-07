@@ -22,7 +22,6 @@ export class CalloutForgeCodeBlockProcessor {
             const pairs = CodeblockParser.fromString(source);
 
             // 2) Extract the CompiledTemplate from the Codeblock
-            const templateManager = new TemplateManager(this.app, this.plugin);
             const compiledTemplate = await this.templateManager.extract(pairs);
 
             // 3) Sanitize the compiled HTML string and builds the DOM

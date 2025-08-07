@@ -1,4 +1,4 @@
-import { Pair } from "../codeblock-engine/pair";
+import { Pair } from "../codeblock-engine/property";
 import { CalloutForgeError } from "../utils/errors";
 
 export type TokenType = "text" | "handlebar";

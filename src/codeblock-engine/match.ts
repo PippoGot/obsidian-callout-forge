@@ -2,7 +2,7 @@ import { CodeblockParser } from "./parser";
 import { ParserState } from "./states";
 
 export enum JumpCondition {
-    Pair,
+    Property,
     NestedStart,
     NestedEnd,
     Text,
@@ -16,7 +16,7 @@ export class LineMatchRule {
 
 export const MATCHERS = new Map<JumpCondition, LineMatchRule>([
     [JumpCondition.NestedEnd, new LineMatchRule(JumpCondition.NestedEnd, null)],
-    [JumpCondition.Pair, new LineMatchRule(JumpCondition.Pair, /^([a-z\-]+)\s*:\s*(.*)$/)],
+    [JumpCondition.Property, new LineMatchRule(JumpCondition.Property, /^([a-z\-]+)\s*:\s*(.*)$/)],
     [JumpCondition.NestedStart, new LineMatchRule(JumpCondition.NestedStart, /^(`{3,})(?:\s*[^\s]+)?\s*$/)],
     [JumpCondition.Text, new LineMatchRule(JumpCondition.Text, /^.*$/)],
 ])

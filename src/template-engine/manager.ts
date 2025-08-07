@@ -1,9 +1,9 @@
 import { App, Plugin, normalizePath } from "obsidian";
-import { CalloutForgeError } from "utils/errors";
-import { TemplateParser } from "./parser";
 
+import { CalloutForgeError } from "utils/errors";
 import { Codeblock, CompiledTemplate, SourceTemplate, TokenizedTemplate } from "utils/types";
 import { TemplateCompiler } from "./compiler";
+import { TemplateParser } from "./parser";
 
 export class TemplateManager {
     private parser: TemplateParser = new TemplateParser();
