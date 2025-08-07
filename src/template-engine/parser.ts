@@ -1,55 +1,48 @@
 import { CalloutForgeError } from "../utils/errors";
+import { SourceTemplate, TokenizedTemplate } from "../utils/types";
 import { HandlebarSyntaxLibrary, HandlebarSyntaxName, SYNTAX_LIBRARY } from "./handlebar";
-import { Template } from "./template";
-import { HandlebarToken, TextToken, Token } from "./token";
+import { HandlebarToken, TextToken } from "./token";
 
 export class TemplateParser {
-    private index: number = 0;
-    private tokens: Token[] = [];
     private library: HandlebarSyntaxLibrary = new Map(SYNTAX_LIBRARY);
 
-    constructor(private source: string) {
-        this.parse();
-    }
+    constructor() { }
 
-    // Static method to obtain a Tmeplate from a source string
-    public static fromString(source: string): Template {
-        const parser = new TemplateParser(source);
-        return parser.template;
-    }
-
-    // Parse the source string to obtain a list of tokens
-    private parse(): void {
+    // Parse the SourceTemplate to obtain a RawTemplate
+    public parse(source: SourceTemplate): TokenizedTemplate {
         // Get the regex with all the syntax rules
         const masterRegex = this.buildMasterRegex();
 
-        // Resets the index and token list
-        this.resetState();
-
-        // Parse the source using the regex
+        // Initialize cycle variables
+        let index = 0;
+        let tokens = [];
         let match: RegExpExecArray | null;
-        while ((match = masterRegex.exec(this.source)) !== null) {
-            // Add the text before the match to a TextToken
-            this.addTextBeforeMatch(match);
 
-            // Find out which handlebar matched and build the correpsonding token
-            const handlebarToken = this.tokenFromMatch(match);
+        // Parse the source using the master regex
+        while ((match = masterRegex.exec(source)) !== null) {
+            // Add the text before the match to a TextToken
+            const token = this.tokenBeforeMatch(index, match, source);
+            if (token) tokens.push(token);
 
             // Add the HandlebarToken
-            this.tokens.push(handlebarToken);
+            tokens.push(this.tokenFromMatch(match));
 
             // Updates the index
-            this.index = match.index + match[0].length;
+            index = match.index + match[0].length;
         }
 
-        // Adds the remaining text to a final TextToken
-        this.addRemainingText();
+        // Add the remaining text after the last match to a TextToken
+        const token = this.tokenAfterParse(index, source);
+        if (token) tokens.push(token);
+
+        // Return the parsed template
+        return tokens as TokenizedTemplate;
     }
 
     // Compose the full regex from the library, e.g.
     //   (?<required>...)|(?<optional>...)|(?<fallback>...)
     private buildMasterRegex(): RegExp {
-        // merge the syntax regexes into one with named capture groups
+        // Merge the syntax regexes into one with named capture groups
         const pattern = Array.from(this.library.entries())
             .map(([name, syntax]) => `(?<${name}>${syntax.regex.source})`)
             .join("|");
@@ -58,29 +51,13 @@ export class TemplateParser {
         return new RegExp(pattern, "g");
     }
 
-    // Reset the parser state (used before parsing)
-    private resetState(): void {
-        this.index = 0;
-        this.tokens = [];
-    }
-
-    // Add plain text before a match
-    private addTextBeforeMatch(match: RegExpExecArray): void {
-        if (match.index > this.index) {
-            const text = this.source.slice(this.index, match.index);
-            this.tokens.push(new TextToken(text));
+    // Builds a TextToken with the text before a match
+    private tokenBeforeMatch(index: number, match: RegExpExecArray, source: SourceTemplate): TextToken | null {
+        if (match.index > index) {
+            const text = source.slice(index, match.index);
+            return new TextToken(text);
         }
-    }
-
-    // Find which syntax matched
-    private identifySyntax(match: RegExpExecArray): HandlebarSyntaxName {
-        // Iterates the library keys to find a mathcing syntax
-        for (const name of this.library.keys()) {
-            if (match.groups?.[name] !== undefined) return name;
-        }
-
-        // If no group matched, throw an error indicating no syntax matched
-        throw new CalloutForgeError("No syntax in this library matched.");
+        return null;
     }
 
     // Create a token from the match
@@ -106,14 +83,23 @@ export class TemplateParser {
         throw new CalloutForgeError("Could not find a matching syntax in this library.")
     }
 
-    // Add remaining plain text after the last match
-    private addRemainingText(): void {
-        if (this.index < this.source.length) {
-            const text = this.source.slice(this.index);
-            this.tokens.push(new TextToken(text));
+    // Find which syntax matched
+    private identifySyntax(match: RegExpExecArray): HandlebarSyntaxName {
+        // Iterates the library keys to find a mathcing syntax
+        for (const name of this.library.keys()) {
+            if (match.groups?.[name] !== undefined) return name;
         }
+
+        // If no group matched, throw an error indicating no syntax matched
+        throw new CalloutForgeError("No syntax in this library matched.");
     }
 
-    // Return the extracted template from the source string
-    get template(): Template { return new Template(this.tokens); }
+    // Add remaining plain text after the last match
+    private tokenAfterParse(index: number, source: SourceTemplate): TextToken | null {
+        if (index < source.length) {
+            const text = source.slice(index);
+            return new TextToken(text);
+        }
+        return null;
+    }
 }
