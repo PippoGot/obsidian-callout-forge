@@ -1,4 +1,4 @@
-import { Pair } from "../codeblock-engine/property";
+import { CodeblockProperty } from "../codeblock-engine/property";
 import { CalloutForgeError } from "../utils/errors";
 
 export type TokenType = "text" | "handlebar";
@@ -20,19 +20,19 @@ export class HandlebarToken extends AbstractToken {
 
     constructor(public readonly key: string) { super("handlebar"); }
 
-    // Return the corresponding TextToken given a Pair object
-    normalize(pair?: Pair): TextToken {
-        // Pair is given, use Pair value
+    // Return the corresponding TextToken given a CodeblockProperty object
+    normalize(pair?: CodeblockProperty): TextToken {
+        // CodeblockProperty is given, use CodeblockProperty value
         if (pair) {
             return new TextToken(pair.wrap());
         }
 
-        // Pair is not given and HandlebarToken has a fallback, use fallpack value
+        // CodeblockProperty is not given and HandlebarToken has a fallback, use fallpack value
         if (this.fallback !== undefined) {
             return new TextToken(this.fallback);
         }
 
-        // Pair is not given and fallback is undefined, throw error
+        // CodeblockProperty is not given and fallback is undefined, throw error
         throw new CalloutForgeError(`Missing value for required key "${this.key}"`);
     }
 }

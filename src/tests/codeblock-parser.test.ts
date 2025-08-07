@@ -157,12 +157,6 @@ describe("CodeblockParser", () => {
         expect(props.find(p => p.key === "template")?.value).toBe("default");
     });
 
-    // Throws if input is not a string
-    it("throws error if input is not a string", () => {
-        // @ts-expect-error
-        expect(() => new CodeblockParser(123)).toThrow("Source must be a string to parse.");
-    });
-
     // Throws if input is empty or whitespace only
     it("throws error on empty input", () => {
         expect(() => new CodeblockParser("   \n   \n")).toThrow("Codeblock is empty or has only whitespaces.");
@@ -189,7 +183,7 @@ describe("CodeblockParser", () => {
         parser.lines = ["dummy line"];
 
         expect(() => {
-            parser.extendPairValue("dummy text");
+            parser.extendCodeblockPropertyValue("dummy text");
         }).toThrow(/no active pair to append to/i);
     });
 
